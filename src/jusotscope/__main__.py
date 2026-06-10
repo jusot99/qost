@@ -18,7 +18,7 @@ Examples:
         """,
     )
     parser.add_argument(
-        "--version", "-V", action="version", version="jusotscope 0.1.0"
+        "--version", "-V", action="version", version="jusotscope 0.1.1"
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)

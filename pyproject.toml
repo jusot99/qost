@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jusotscope"
-version = "0.1.0"
+version = "0.1.1"
 description = "Unified offensive security toolkit, recon, scanning, AD, reporting"
 readme = "README.md"
 license = { text = "MIT" }
