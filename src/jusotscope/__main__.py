@@ -24,8 +24,8 @@ Examples:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # Register modules
-    from jusotscope.recon import __main__ as recon_main
-    recon_main.register(subparsers)
+    from jusotscope.recon import cli as recon_cli
+    recon_cli.register(subparsers)
 
     args = parser.parse_args()
 
