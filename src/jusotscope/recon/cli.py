@@ -116,7 +116,7 @@ async def _run(args: argparse.Namespace):
         summary.add_row(f"[bold cyan]Mode:[/] [green]{scan_mode}")
         panel(
             "jusotscope recon",
-            Group(Markdown("### Ghost DNS Recon v0.1.1"), Rule(style="dim"), summary),
+            Group(Markdown("### Ghost DNS Recon v0.1.0"), Rule(style="dim"), summary),
             border="cyan",
             width=80,
         )
