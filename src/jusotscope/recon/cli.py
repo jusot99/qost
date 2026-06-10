@@ -107,6 +107,7 @@ async def _run(args: argparse.Namespace):
         from rich.markdown import Markdown
         from rich.rule import Rule
         from rich.table import Table as RichTable
+        from rich import box
         summary = RichTable.grid(padding=(0, 2))
         summary.add_column()
         summary.add_row(f"[bold cyan]Target:[/] [yellow]{display_target}")
@@ -115,8 +116,9 @@ async def _run(args: argparse.Namespace):
         summary.add_row(f"[bold cyan]Mode:[/] [green]{scan_mode}")
         panel(
             "jusotscope recon",
-            Group(Markdown("### Ghost DNS Recon v3.0"), Rule(style="dim"), summary),
+            Group(Markdown("### Ghost DNS Recon v0.1.0"), Rule(style="dim"), summary),
             border="cyan",
+            width=80,
         )
 
     # ── Phase 1: DNS Records ──
@@ -144,7 +146,7 @@ async def _run(args: argparse.Namespace):
 
             if not silent and not json_out:
                 from rich.table import Table as RichTable
-                t = RichTable(title=f"{rtype} Records", box=RichTable.box.SIMPLE, title_justify="left")
+                t = RichTable(title=f"{rtype} Records", box=box.SIMPLE, title_justify="left")
                 t.add_column("Value", style="cyan")
                 for row in rows:
                     t.add_row(row)
@@ -176,7 +178,7 @@ async def _run(args: argparse.Namespace):
         if not silent and not json_out:
             if vulnerabilities:
                 from rich.table import Table as RichTable
-                vt = RichTable(box=RichTable.box.SIMPLE)
+                vt = RichTable(box=box.SIMPLE)
                 vt.add_column("Severity")
                 vt.add_column("Issue")
                 vt.add_column("Fix")
@@ -252,7 +254,8 @@ async def _run(args: argparse.Namespace):
         if not silent and not json_out:
             if subdomains:
                 from rich.table import Table as RichTable
-                st = RichTable(box=RichTable.box.SIMPLE)
+                from rich import box
+                st = RichTable(box=box.SIMPLE)
                 st.add_column("#")
                 st.add_column("Subdomain", style="cyan")
                 for i, s in enumerate(subdomains[:25], 1):
@@ -349,7 +352,7 @@ async def _run(args: argparse.Namespace):
         stats.add_row(f"IPs Resolved:    [white]{len(resolved_ips)}[/]")
         from rich.panel import Panel as RPanel
         from rich import box
-        console.print(RPanel(stats, border_style="green", box=box.ROUNDED))
+        console.print(RPanel(stats, border_style="green", box=box.ROUNDED, width=80))
         console.print("\n[bold green]Reconnaissance complete.[/]")
 
     if json_out:

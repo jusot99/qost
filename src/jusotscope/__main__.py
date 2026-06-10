@@ -8,7 +8,7 @@ from jusotscope._shared.output import console
 def main():
     parser = argparse.ArgumentParser(
         prog="jusotscope",
-        description="Unified offensive security toolkit — recon, scanning, AD, reporting",
+        description="Unified offensive security toolkit - recon, scanning, AD, reporting",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

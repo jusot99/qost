@@ -13,8 +13,8 @@ from rich import box
 console = Console()
 
 
-def panel(title: str, content: Any, border: str = "blue"):
-    console.print(Panel(content, title=title, border_style=border, box=box.ROUNDED))
+def panel(title: str, content: Any, border: str = "blue", width: int | None = None):
+    console.print(Panel(content, title=title, border_style=border, box=box.ROUNDED, width=width))
 
 
 def table(title: str, columns: list[tuple[str, str]], rows: list[list[str]]):

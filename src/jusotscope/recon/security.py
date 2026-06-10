@@ -117,9 +117,7 @@ def check_takeover(cname_records: list[str]) -> list[Vuln]:
         target = cname.rstrip(".")
         for cloud_domain, provider in CLOUD_TARGETS.items():
             if cloud_domain in target:
-                try:
-                    resolve_ip(target)
-                except Exception:
+                if not resolve_ip(target):
                     vulns.append(Vuln(
                         "Subdomain Takeover Possible", "HIGH",
                         f"CNAME to {provider} ({target}) but service not provisioned",
