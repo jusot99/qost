@@ -19,7 +19,7 @@ Build and maintained by [Jusot](https://github.com/jusot99).
 ## Quick Start
 
 ```bash
-pip install jusotscope
+pip install git+https://github.com/jusot99/jusotscope.git
 
 # DNS Recon & Subdomain Discovery
 jusotscope recon example.com --brute
