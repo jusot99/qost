@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import httpx
 
-from jusotscope.recon.utils import is_ip
+from jusotscope.recon.utils import is_ip, resolve_ip
 
 
 async def crtsh_search(domain: str) -> list[str]:
@@ -23,6 +23,9 @@ async def crtsh_search(domain: str) -> list[str]:
                         for line in str(name).splitlines():
                             sub = line.strip().lower()
                             if not sub or sub.startswith("*") or domain not in sub:
+                                continue
+                            # Filter out suspicious entries (e.g. starting with random numbers)
+                            if re.match(r"^\d+[a-zA-Z]", sub):
                                 continue
                             if "@" in sub:
                                 sub = sub.split("@")[1]
@@ -85,18 +88,43 @@ async def rapiddns_search(domain: str) -> list[str]:
 
 async def find_subdomains(target: str) -> list[str]:
     all_subs: set[str] = set()
-    async with asyncio.TaskGroup() as tg:
-        t1 = tg.create_task(crtsh_search(target))
-        t2 = tg.create_task(alienvault_search(target))
-        t3 = tg.create_task(rapiddns_search(target))
-    for t in [t1, t2, t3]:
-        all_subs.update(t.result())
+    try:
+        results = await asyncio.gather(
+            crtsh_search(target),
+            alienvault_search(target),
+            rapiddns_search(target),
+            return_exceptions=True
+        )
+        for res in results:
+            if isinstance(res, list):
+                for s in res:
+                    # Filter out suspicious entries (e.g. starting with random numbers)
+                    # and ensure it's a valid subdomain format
+                    if re.match(r"^\d+[a-zA-Z]", s.split(".")[0]):
+                        continue
+                    all_subs.add(s)
+    except Exception:
+        pass
     return sorted(all_subs)
 
 
 def brute_force(domain: str, wordlist_path: str | None = None) -> list[str]:
     if is_ip(domain):
         return []
+
+    # Detect Wildcard DNS (Issue 4 & 6)
+    wildcard_ip = None
+    try:
+        import uuid
+        # Check two different random subdomains to confirm wildcard
+        r1 = f"wc-{uuid.uuid4().hex[:8]}.{domain}"
+        r2 = f"wc-{uuid.uuid4().hex[:8]}.{domain}"
+        ip1 = resolve_ip(r1)
+        ip2 = resolve_ip(r2)
+        if ip1 and ip1 == ip2:
+            wildcard_ip = ip1
+    except Exception:
+        pass
 
     words = [
         "www", "mail", "ftp", "webmail", "smtp", "pop", "ns1", "ns2",
@@ -124,10 +152,18 @@ def brute_force(domain: str, wordlist_path: str | None = None) -> list[str]:
     def check(sub: str) -> str | None:
         subdomain = f"{sub}.{domain}"
         try:
-            socket.gethostbyname(subdomain)
+            ip = resolve_ip(subdomain)
+            if not ip:
+                return None
+            if wildcard_ip and ip == wildcard_ip:
+                # If it's a common subdomain like 'www', don't drop it just because of wildcard
+                if sub.lower() == "www":
+                    return subdomain
+                return None
             return subdomain
-        except OSError:
+        except Exception:
             return None
+
 
     with ThreadPoolExecutor(max_workers=100) as pool:
         futures = {pool.submit(check, w): w for w in words}

@@ -1,0 +1,121 @@
+import argparse
+import asyncio
+import json
+import time
+
+from jusotscope._shared.output import console
+from jusotscope.scan.scanner import (
+    DEFAULT_PORTS,
+    parse_ports,
+    resolve_host,
+    scan_ports,
+    is_ip,
+)
+
+
+def run(args: argparse.Namespace):
+    asyncio.run(_run(args))
+
+
+async def _run(args: argparse.Namespace):
+    target = args.target
+    port_spec = args.ports
+    silent = args.silent
+    json_out = args.json_out
+    timeout = args.timeout
+    concurrency = args.concurrency
+
+    start = time.time()
+
+    ports = parse_ports(port_spec) if port_spec else DEFAULT_PORTS
+
+    ip = resolve_host(target)
+    if not ip:
+        console.print(f"[red]Could not resolve:[/] {target}")
+        return
+
+    target_type = "IP Address" if is_ip(target) else "Domain"
+    display_target = f"{target} ({ip})" if target_type == "Domain" else target
+
+    if not silent and not json_out:
+        from rich.console import Group
+        from rich.panel import Panel
+        from rich import box
+        info = (
+            f"[bold cyan]Target:[/] [yellow]{display_target}\n"
+            f"[bold cyan]Ports:[/] [green]{len(ports)} ports ({ports[0]}-{ports[-1]})\n"
+        )
+        console.print(Panel(
+            Group(info),
+            title="jusotscope scan",
+            border_style="cyan",
+            box=box.ROUNDED,
+            width=80,
+        ))
+
+    if not silent and not json_out:
+        console.print("[bold]Scanning...[/]")
+
+    results = await scan_ports(target, ports, timeout, concurrency)
+    open_ports = [r for r in results if r["state"] == "open"]
+
+    elapsed = round(time.time() - start, 1)
+
+    if json_out:
+        output = {
+            "target": target,
+            "ip": ip,
+            "type": target_type,
+            "ports_scanned": len(ports),
+            "open_ports": open_ports,
+            "duration_seconds": elapsed,
+        }
+        print(json.dumps(output, indent=2))
+        return
+
+    if not silent:
+        if not open_ports:
+            console.print("[yellow]No open ports found.[/]")
+        else:
+            from rich.table import Table
+            from rich import box
+            t = Table(box=box.SIMPLE, title_justify="left")
+            t.add_column("Port", style="cyan", no_wrap=True)
+            t.add_column("State", style="green", no_wrap=True)
+            t.add_column("Service", style="yellow")
+            t.add_column("Banner", style="dim")
+            for r in open_ports:
+                banner = r.get("banner", "")
+                if len(banner) > 60:
+                    banner = banner[:60] + "..."
+                t.add_row(
+                    str(r["port"]),
+                    r["state"],
+                    r.get("service", ""),
+                    banner,
+                )
+            console.print(t)
+
+        from rich.panel import Panel
+        from rich import box
+        stats = (
+            f"[bold cyan]Duration:[/] {elapsed}s\n"
+            f"[bold cyan]Ports scanned:[/] {len(ports)}\n"
+            f"[bold cyan]Open ports:[/] [green]{len(open_ports)}[/]"
+        )
+        console.print(Panel(stats, border_style="green", box=box.ROUNDED, width=80))
+        console.print("[bold green]Scan complete.[/]")
+
+
+def register(subparsers):
+    p = subparsers.add_parser("scan", help="Port scanning and service detection")
+    p.add_argument("target", help="Domain or IP address")
+    p.add_argument(
+        "-p", "--ports",
+        help="Ports to scan (e.g. '22,80,443' or '1-1000'). Default: top 50 ports",
+    )
+    p.add_argument("--timeout", type=float, default=3.0, help="Connect timeout in seconds (default: 3.0)")
+    p.add_argument("--concurrency", type=int, default=50, help="Max concurrent connections (default: 50)")
+    p.add_argument("--json", "-j", action="store_true", dest="json_out", help="JSON output")
+    p.add_argument("--silent", "-s", action="store_true", help="Suppress terminal output")
+    p.set_defaults(func=run)

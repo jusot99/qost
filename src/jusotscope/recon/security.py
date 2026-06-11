@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from jusotscope.recon.scanner import query_records
 from jusotscope.recon.utils import resolve_ip
@@ -62,7 +62,14 @@ def check_spf_dmarc(domain: str, txt_records: list[str]) -> list[Vuln]:
             "Add SPF: v=spf1 mx ~all",
         ))
 
-    dmarc_found = any("v=dmarc" in t for t in txt_records)
+    dmarc_answers, _ = query_records(f"_dmarc.{domain}", "TXT")
+    dmarc_found = False
+    if dmarc_answers:
+        for rdata in dmarc_answers:
+            if "v=DMARC1" in str(rdata).upper():
+                dmarc_found = True
+                break
+    
     if not dmarc_found:
         vulns.append(Vuln(
             "Missing DMARC Record", "MEDIUM",
@@ -79,9 +86,9 @@ def check_spf_dmarc(domain: str, txt_records: list[str]) -> list[Vuln]:
 
     if not dkim_found:
         vulns.append(Vuln(
-            "No DKIM Record Found", "LOW",
-            "Email signing not detected",
-            "Configure DKIM signing for your mail provider",
+            "DKIM Not Detected", "INFO",
+            "No common DKIM selectors found via DNS",
+            "Ensure DKIM is configured if using this domain for email",
         ))
 
     return vulns
@@ -119,8 +126,8 @@ def check_takeover(cname_records: list[str]) -> list[Vuln]:
             if cloud_domain in target:
                 if not resolve_ip(target):
                     vulns.append(Vuln(
-                        "Subdomain Takeover Possible", "HIGH",
-                        f"CNAME to {provider} ({target}) but service not provisioned",
-                        "Remove the dangling CNAME or provision the service",
+                        "Potential Subdomain Takeover", "HIGH",
+                        f"CNAME points to {provider} ({target}) but does not resolve",
+                        "Verify if the service is still in use; if not, remove the CNAME record",
                     ))
     return vulns

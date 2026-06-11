@@ -41,23 +41,31 @@ async def http_probe(host: str) -> dict:
 
 async def enrich_asn(ip: str) -> dict | None:
     async with httpx.AsyncClient(timeout=10, verify=False) as c:
+        # Try ipinfo.io first as it's very reliable for both v4 and v6
+        try:
+            r = await c.get(f"https://ipinfo.io/{ip}/json")
+            if r.status_code == 200:
+                data = r.json()
+                org = data.get("org", "")
+                if org:
+                    return {"name": org}
+        except Exception:
+            pass
+
+        # Fallback to RDAP (ARIN)
         try:
             r = await c.get(f"https://rdap.arin.net/registry/ip/{ip}")
             if r.status_code == 200:
                 data = r.json()
                 name = ""
                 for ent in data.get("entities", []):
-                    for vcard in ent.get("vcardArray", [])[1:]:
-                        if vcard[0] == "fn":
-                            name = vcard[3]
-                return {"name": name}
-        except Exception:
-            pass
-        try:
-            r = await c.get(f"https://ipinfo.io/{ip}/json")
-            if r.status_code == 200:
-                data = r.json()
-                return {"name": data.get("org", "")}
+                    va = ent.get("vcardArray", [])
+                    if len(va) > 1:
+                        for vcard in va[1]:
+                            if vcard[0] == "fn":
+                                name = vcard[3]
+                if name:
+                    return {"name": name}
         except Exception:
             pass
     return None
@@ -288,50 +296,63 @@ async def _run(args: argparse.Namespace):
     if not silent and not json_out:
         console.print("## Phase 5: Live Host Detection", style="bold yellow")
 
-    targets = subdomains if subdomains else [target]
+    targets = [target] + (subdomains if subdomains else [])
 
-    def check(host: str) -> tuple[str, str] | None:
+    def check(host: str) -> list[tuple[str, str]]:
         try:
-            ip = utils.resolve_ip(host)
-            if ip:
-                return (host, ip)
+            ips = utils.resolve_all_ips(host)
+            return [(host, ip) for ip in ips]
         except Exception:
             pass
-        return None
+        return []
 
     with ThreadPoolExecutor(max_workers=50) as pool:
         futures = {pool.submit(check, h): h for h in targets}
         for f in as_completed(futures):
-            r = f.result()
-            if r:
-                live_hosts.append(r)
-                resolved_ips.add(r[1])
+            for r in f.result():
+                if r:
+                    live_hosts.append(r)
+                    resolved_ips.add(r[1])
 
     if not silent and not json_out:
         console.print(f"  [bold]{len(live_hosts)}[/] hosts resolved\n")
 
-    for host, ip in live_hosts[:10]:
+    host_details = []
+    # Probe all hosts for JSON, but limit to 10 for terminal to avoid clutter
+    hosts_to_probe = live_hosts if json_out else live_hosts[:10]
+    
+    if not json_out and not silent and len(live_hosts) > 10:
+        console.print(f"  [yellow]Note:[/] Probing only the first 10 hosts for terminal view. Use [bold]--json[/] for full results.\n")
+
+    for host, ip in hosts_to_probe:
         probe = await http_probe(host)
+        # Port scan only if limited number of IPs to avoid being blocked/slow
         ports = portscan.scan(ip) if len(resolved_ips) < 20 else []
-
-        from rich.tree import Tree
-
-        tree = Tree(f"[cyan]{host}[/] → [green]{ip}[/]")
-        if probe["status"]:
-            sc = "green" if probe["status"] < 400 else "yellow" if probe["status"] < 500 else "red"
-            tree.add(f"HTTP: [bold {sc}]{probe['status']}[/]")
-        if probe["title"]:
-            tree.add(f"Title: [white]{probe['title']}[/]")
-        if probe["server"]:
-            tree.add(f"Server: [dim]{probe['server']}[/]")
-        if ports:
-            p_str = ", ".join(f"{p}({s})" for p, s in ports[:6])
-            tree.add(f"Ports: [yellow]{p_str}[/]")
-        asn = await enrich_asn(ip)
-        if asn and asn["name"]:
-            tree.add(f"ASN: [dim]{asn['name']}[/]")
+        
+        detail = {
+            "host": host,
+            "ip": ip,
+            "http": probe,
+            "ports": [{"port": p, "service": s} for p, s in ports],
+            "asn": await enrich_asn(ip)
+        }
+        host_details.append(detail)
 
         if not silent and not json_out:
+            from rich.tree import Tree
+            tree = Tree(f"[cyan]{host}[/] → [green]{ip}[/]")
+            if probe["status"]:
+                sc = "green" if probe["status"] < 400 else "yellow" if probe["status"] < 500 else "red"
+                tree.add(f"HTTP: [bold {sc}]{probe['status']}[/]")
+            if probe["title"]:
+                tree.add(f"Title: [white]{probe['title']}[/]")
+            if probe["server"]:
+                tree.add(f"Server: [dim]{probe['server']}[/]")
+            if ports:
+                p_str = ", ".join(f"{p}({s})" for p, s in ports[:6])
+                tree.add(f"Ports: [yellow]{p_str}[/]")
+            if detail["asn"] and detail["asn"]["name"]:
+                tree.add(f"ASN: [dim]{detail['asn']['name']}[/]")
             console.print(tree)
 
     if not silent and not json_out:
@@ -362,7 +383,7 @@ async def _run(args: argparse.Namespace):
             "records": all_records,
             "nameservers": ns_list,
             "subdomains": sorted(subdomains),
-            "live_hosts": [[h, ip] for h, ip in live_hosts],
+            "live_hosts": host_details,
             "vulnerabilities": [
                 {"type": v.type, "severity": v.severity, "detail": v.detail, "fix": v.fix}
                 for v in vulnerabilities

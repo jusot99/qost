@@ -14,12 +14,13 @@ def query_records(domain: str, rtype: str, resolvers: list[str] | None = None):
         return None, "IP address - no DNS records"
 
     resolvers = resolvers or DEFAULT_RESOLVERS
+    res = dns.resolver.Resolver()
+    res.timeout = 4
+    res.lifetime = 8
+    
     for rip in resolvers:
         try:
-            res = dns.resolver.Resolver()
             res.nameservers = [rip]
-            res.timeout = 4
-            res.lifetime = 8
             answers = res.resolve(domain, rtype, raise_on_no_answer=False)
             if answers.rrset is not None:
                 return answers, None
