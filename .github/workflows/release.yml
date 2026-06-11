@@ -35,6 +35,7 @@ jobs:
           echo "binary=${{ matrix.tool }}-${OS_SUFFIX}${EXE_EXT}" >> $GITHUB_OUTPUT
 
       - name: Build binary
+        shell: bash
         run: |
           pyinstaller --onefile \
             --name ${{ steps.names.outputs.binary }} \
