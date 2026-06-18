@@ -1,19 +1,46 @@
-# jusotscope
+<div align="center">
+<pre>
+▄▄▄██▀▀▀█    ██   ██████  ▒█████ ▄▄▄█████▓  ██████  ▄████▄   ▒█████   ██▓███  ▓█████ 
+   ▒██   ██  ▓██▒▒██    ▒ ▒██▒  ██▒▓  ██▒ ▓▒▒██    ▒ ▒██▀ ▀█  ▒██▒  ██▒▓██░  ██▒▓█   ▀ 
+   ░██  ▓██  ▒██░░ ▓██▄   ▒██░  ██▒▒ ▓██░ ▒░░ ▓██▄   ▒▓█    ▄ ▒██░  ██▒▓██░ ██▓▒▒███   
+▓██▄██▓ ▓▓█  ░██░  ▒   ██▒▒██   ██░░ ▓██▓ ░   ▒   ██▒▒▓▓▄ ▄██▒▒██   ██░▒██▄█▓▒ ▒▒▓█  ▄ 
+ ▓███▒  ▒▒█████▓ ▒██████▒▒░ ████▓▒░  ▒██▒ ░ ▒██████▒▒▒ ▓███▀ ░░ ████▓▒░▒██▒ ░  ░░▒████▒
+ ▒▓▒▒░  ░▒▓▒ ▒ ▒ ▒ ▒▓▒ ▒ ░░ ▒░▒░▒░   ▒ ░░   ▒ ▒▓▒ ▒ ░░ ░▒ ▒  ░░ ▒░▒░▒░ ▒▓▒░ ░  ░░░ ▒░ ░
+ ▒ ░▒░  ░░▒░ ░ ░ ░ ░▒  ░ ░  ░ ▒ ▒░     ░    ░ ░▒  ░ ░  ░  ▒     ░ ▒ ▒░ ░▒ ░      ░ ░  ░
+ ░ ░ ░   ░░░ ░ ░ ░  ░  ░  ░ ░ ░ ▒    ░      ░  ░  ░  ░        ░ ░ ░ ▒  ░░          ░   
+ ░   ░     ░           ░      ░ ░                 ░  ░ ░          ░ ░              ░  ░
+                                                     ░ 
+</pre>
 
-Unified offensive security toolkit for reconnaissance, port scanning, Active Directory enumeration, and reporting.
+<p>
+  <a href="https://github.com/jusot99/jusotscope/releases"><img src="https://img.shields.io/github/v/release/jusot99/jusotscope?style=for-the-badge&label=version&color=blue" alt="Version"></a>
+  <a href="https://github.com/jusot99/jusotscope/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" alt="License"></a>
+  <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10%2B-blue?style=for-the-badge&logo=python" alt="Python"></a>
+  <a href="https://github.com/jusot99/jusotscope/actions"><img src="https://img.shields.io/github/actions/workflow/status/jusot99/jusotscope/release.yml?style=for-the-badge&label=build" alt="Build"></a>
+</p>
 
-Built and maintained by [Jusot](https://github.com/jusot99).
+<p><b>recon · scan · ad enum · report</b></p>
+
+<p>
+  <a href="#features">Features</a> ·
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#commands">Commands</a> ·
+  <a href="#install-from-source">Install</a>
+</p>
+</div>
 
 ## Features
 
-- **DNS Reconnaissance** — Comprehensive DNS analysis (A, AAAA, MX, NS, TXT, CNAME, SOA, SRV, CAA, SSHFP, TLSA, NAPTR, DNSKEY, DS), zone transfer testing, wildcard DNS detection, and Certificate Transparency log enumeration.
-- **Subdomain Discovery** — Passive enumeration via CT logs and active brute-forcing with custom wordlists.
-- **Security Assessment** — SPF/DMARC/DKIM misconfiguration checks, DNSSEC validation, subdomain takeover detection across 14 cloud providers.
-- **Port Scanning** — Asynchronous TCP scanning with service identification and banner grabbing. Top 50 ports by default, custom port ranges supported.
-- **Active Directory Enumeration** — LDAP-based domain enumeration (users, groups, computers, SPNs, AS-REP roastable accounts, delegation, trusts) with raw SMB null session detection.
-- **Reporting** — Terminal output via Rich, structured JSON exports, and Markdown reports. Every subcommand supports `--json` and `--output report.md`.
-- **IPv6 Ready** — Full dual-stack support for both IPv4 and IPv6 targets.
-- **Cross-Platform** — Linux, macOS, and Windows binaries available.
+| Category | Description |
+|---|---|
+| **DNS Reconnaissance** | Comprehensive DNS analysis, zone transfer testing, wildcard detection, CT log enumeration |
+| **Subdomain Discovery** | Passive CT log enumeration and active brute-forcing with custom wordlists |
+| **Security Assessment** | SPF/DMARC/DKIM checks, DNSSEC validation, takeover detection across 14 cloud providers |
+| **Port Scanning** | Async TCP scanning with service identification and banner grabbing |
+| **Active Directory Enumeration** | LDAP domain enumeration (users, groups, computers, SPNs, AS-REP, delegation, trusts) + SMB null session detection |
+| **Reporting** | Rich terminal output, structured JSON, Markdown reports. Every subcommand supports `--json` and `-o report.md` |
+| **IPv6 Ready** | Full dual-stack support for IPv4 and IPv6 targets |
+| **Cross-Platform** | Linux, macOS, and Windows binaries |
 
 ## Quick Start
 
@@ -37,7 +64,7 @@ jusotscope recon example.com --json
 jusotscope recon example.com -o report.md
 ```
 
-Pre-built binaries are available on the [releases page](https://github.com/jusot99/jusotscope/releases).
+> Pre-built binaries are on the [releases page](https://github.com/jusot99/jusotscope/releases).
 
 ## Commands
 
@@ -68,8 +95,8 @@ pip install -e .
 ## Requirements
 
 - Python 3.10 or later
-- Dependencies: `dnspython`, `httpx`, `ldap3`, `rich`
+- `dnspython` · `httpx` · `ldap3` · `rich`
 
 ## License
 
-MIT
+MIT — Built and maintained by [Jusot](https://github.com/jusot99).
