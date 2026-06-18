@@ -12,6 +12,7 @@ requires-python = ">=3.10"
 dependencies = [
     "dnspython>=2.6",
     "httpx>=0.26",
+    "ldap3>=2.9",
     "rich>=13",
 ]
 

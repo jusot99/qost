@@ -4,6 +4,7 @@ import json
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
 import httpx
 
@@ -81,6 +82,9 @@ async def _run(args: argparse.Namespace):
     wordlist_path = args.wordlist
     silent = args.silent
     json_out = args.json_out
+    output_path = args.output
+    if output_path and output_path.endswith(".json"):
+        json_out = True
 
     start = time.time()
     records_map = {
@@ -390,7 +394,90 @@ async def _run(args: argparse.Namespace):
             ],
             "duration_seconds": round(elapsed, 1),
         }
-        print(json.dumps(output, indent=2))
+        json_str = json.dumps(output, indent=2)
+        if output_path and output_path.endswith(".json"):
+            Path(output_path).write_text(json_str)
+        else:
+            print(json_str)
+
+    # Markdown report
+    if output_path and not output_path.endswith(".json"):
+        _write_recon_markdown(output_path, target, target_type, display_target, brute, all_records, ns_list, subdomains, host_details, vulnerabilities, elapsed)
+        if not silent:
+            console.print(f"\n[green]Report written to {output_path}[/]")
+
+
+def _write_recon_markdown(output_path: str, target: str, target_type: str, display_target: str, brute: bool, all_records: dict, ns_list: list, subdomains: list, host_details: list, vulnerabilities: list, elapsed: float):
+    lines = [
+        f"# Reconnaissance Report — {display_target}",
+        "",
+        "| Field | Value |",
+        "|---|---|",
+        f"| Target | {display_target} |",
+        f"| Type | {target_type} |",
+        f"| Mode | {'Full Reconnaissance' if brute else 'Standard'} |",
+        f"| Duration | {elapsed:.1f}s |",
+        "",
+    ]
+    if all_records:
+        lines.append("## DNS Records")
+        lines.append("")
+        for rtype, records in sorted(all_records.items()):
+            if records:
+                lines.append(f"### {rtype} Records")
+                lines.append("")
+                for r in records:
+                    lines.append(f"- {r}")
+                lines.append("")
+    if subdomains:
+        lines.append(f"## Subdomains ({len(subdomains)})")
+        lines.append("")
+        for s in sorted(subdomains):
+            lines.append(f"- {s}")
+        lines.append("")
+    if host_details:
+        lines.append(f"## Live Hosts ({len(host_details)})")
+        lines.append("")
+        for h in host_details:
+            http = h.get("http", {})
+            ports = h.get("ports", [])
+            asn = h.get("asn")
+            line = f"- **{h['host']}** → {h['ip']}"
+            if http.get("status"):
+                line += f" | HTTP {http['status']}"
+            if http.get("title"):
+                line += f" | {http['title']}"
+            if ports:
+                line += " | Ports: " + ", ".join(f"{p['port']}({p['service']})" for p in ports[:5])
+            if asn and asn.get("name"):
+                line += f" | ASN: {asn['name']}"
+            lines.append(line)
+        lines.append("")
+    if vulnerabilities:
+        lines.append("## Vulnerabilities")
+        lines.append("")
+        lines.append("| Severity | Issue | Fix |")
+        lines.append("|---|---|---|")
+        for v in vulnerabilities:
+            lines.append(f"| {v.severity} | {v.detail} | {v.fix} |")
+        lines.append("")
+    if ns_list:
+        lines.append("## Nameservers")
+        lines.append("")
+        for ns in ns_list:
+            lines.append(f"- {ns}")
+        lines.append("")
+    lines.append("## Summary")
+    lines.append("")
+    for rtype, records in sorted(all_records.items()):
+        if records:
+            lines.append(f"- {rtype}: {len(records)} records")
+    lines.append(f"- Subdomains: {len(subdomains)}")
+    lines.append(f"- Live Hosts: {len(host_details)}")
+    lines.append(f"- Vulnerabilities: {len(vulnerabilities)}")
+    lines.append(f"- Duration: {elapsed:.1f}s")
+    lines.append("")
+    Path(output_path).write_text("\n".join(lines) + "\n")
 
 
 def register(subparsers):
@@ -400,5 +487,6 @@ def register(subparsers):
     p.add_argument("--wordlist", "-w", help="Path to wordlist file")
     p.add_argument("--resolver", "-r", action="append", help="Custom DNS resolver")
     p.add_argument("--json", "-j", action="store_true", dest="json_out", help="JSON output")
+    p.add_argument("--output", "-o", help="Write report to file (.md or .json)")
     p.add_argument("--silent", "-s", action="store_true", help="Suppress terminal output")
     p.set_defaults(func=run)

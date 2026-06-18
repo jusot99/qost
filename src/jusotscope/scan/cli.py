@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import json
 import time
+from pathlib import Path
 
 from jusotscope._shared.output import console
 from jusotscope.scan.scanner import (
@@ -22,6 +23,9 @@ async def _run(args: argparse.Namespace):
     port_spec = args.ports
     silent = args.silent
     json_out = args.json_out
+    output_path = args.output
+    if output_path and output_path.endswith(".json"):
+        json_out = True
     timeout = args.timeout
     concurrency = args.concurrency
 
@@ -70,7 +74,19 @@ async def _run(args: argparse.Namespace):
             "open_ports": open_ports,
             "duration_seconds": elapsed,
         }
-        print(json.dumps(output, indent=2))
+        json_str = json.dumps(output, indent=2)
+        if output_path and output_path.endswith(".json"):
+            Path(output_path).write_text(json_str)
+        else:
+            print(json_str)
+
+    # Markdown report
+    if output_path and not output_path.endswith(".json"):
+        _write_scan_markdown(target, ip, target_type, display_target, ports, open_ports, elapsed, output_path)
+        if not silent:
+            console.print(f"\n[green]Report written to {output_path}[/]")
+
+    if json_out:
         return
 
     if not silent:
@@ -107,6 +123,44 @@ async def _run(args: argparse.Namespace):
         console.print("[bold green]Scan complete.[/]")
 
 
+def _write_scan_markdown(target: str, ip: str, target_type: str, display_target: str, ports: list, open_ports: list, elapsed: float, output_path: str):
+    lines = [
+        f"# Port Scan Report — {display_target}",
+        "",
+        "| Field | Value |",
+        "|---|---|",
+        f"| Target | {display_target} |",
+        f"| IP | {ip} |",
+        f"| Type | {target_type} |",
+        f"| Ports Scanned | {len(ports)} ({ports[0]}-{ports[-1]}) |",
+        f"| Duration | {elapsed}s |",
+        "",
+    ]
+    if open_ports:
+        lines.append("## Open Ports")
+        lines.append("")
+        lines.append("| Port | Service | Banner |")
+        lines.append("|---|---|---|")
+        for r in open_ports:
+            banner = r.get("banner", "")
+            if len(banner) > 80:
+                banner = banner[:80] + "..."
+            lines.append(f"| {r['port']} | {r.get('service', '')} | {banner} |")
+        lines.append("")
+    else:
+        lines.append("## Results")
+        lines.append("")
+        lines.append("No open ports found.")
+        lines.append("")
+    lines.append("## Summary")
+    lines.append("")
+    lines.append(f"- Ports scanned: {len(ports)}")
+    lines.append(f"- Open ports: {len(open_ports)}")
+    lines.append(f"- Duration: {elapsed}s")
+    lines.append("")
+    Path(output_path).write_text("\n".join(lines) + "\n")
+
+
 def register(subparsers):
     p = subparsers.add_parser("scan", help="Port scanning and service detection")
     p.add_argument("target", help="Domain or IP address")
@@ -117,5 +171,6 @@ def register(subparsers):
     p.add_argument("--timeout", type=float, default=3.0, help="Connect timeout in seconds (default: 3.0)")
     p.add_argument("--concurrency", type=int, default=50, help="Max concurrent connections (default: 50)")
     p.add_argument("--json", "-j", action="store_true", dest="json_out", help="JSON output")
+    p.add_argument("--output", "-o", help="Write report to file (.md or .json)")
     p.add_argument("--silent", "-s", action="store_true", help="Suppress terminal output")
     p.set_defaults(func=run)

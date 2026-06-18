@@ -52,6 +52,8 @@ def main():
   jusotscope recon 8.8.8.8
   jusotscope scan example.com
   jusotscope scan example.com -p 22,80,443 --json
+  jusotscope ad enum 10.10.10.1 -d corp.local
+  jusotscope ad enum 10.10.10.1 -d corp.local -u admin -p P@ssw0rd --json
         """,
     )
     parser.add_argument(
@@ -65,6 +67,9 @@ def main():
 
     from jusotscope.scan import cli as scan_cli
     scan_cli.register(subparsers)
+
+    from jusotscope.ad import cli as ad_cli
+    ad_cli.register(subparsers)
 
     args = parser.parse_args()
 
