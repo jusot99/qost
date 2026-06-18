@@ -2,18 +2,46 @@ name: Build and Release
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths: [pyproject.toml, .github/workflows/release.yml]
+
+permissions:
+  contents: write
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      exists: ${{ steps.check.outputs.exists }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: echo "version=v$(grep '^version' pyproject.toml | sed 's/.*"\(.*\)"/\1/')" >> $GITHUB_OUTPUT
+
+      - name: Check if release exists
+        id: check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ steps.version.outputs.version }}" --repo ${{ github.repository }} &>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
   build:
+    needs: check
+    if: needs.check.outputs.exists == 'false'
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         tool: ["jusotscope"]
-
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -24,15 +52,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pyinstaller httpx dnspython rich
+          pip install pyinstaller httpx dnspython rich ldap3
 
       - name: Set binary name
         id: names
         shell: bash
         run: |
-          OS_SUFFIX="${{ runner.os == 'Windows' && 'win' || runner.os == 'macOS' && 'macos' || 'linux' }}"
-          EXE_EXT="${{ runner.os == 'Windows' && '.exe' || '' }}"
-          echo "binary=${{ matrix.tool }}-${OS_SUFFIX}${EXE_EXT}" >> $GITHUB_OUTPUT
+          OS="${{ runner.os }}"
+          if [ "$OS" = "Windows" ]; then SUFFIX="windows-x86_64.exe"
+          elif [ "$OS" = "macOS" ]; then SUFFIX="darwin-arm64"
+          else SUFFIX="linux-x86_64"
+          fi
+          echo "binary=${{ matrix.tool }}-${SUFFIX}" >> $GITHUB_OUTPUT
 
       - name: Build binary
         shell: bash
@@ -46,11 +77,13 @@ jobs:
             --hidden-import dns.query \
             --hidden-import httpx \
             --hidden-import rich \
+            --hidden-import ldap3 \
             src/jusotscope/__main__.py
 
       - name: Upload binary
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.check.outputs.version }}
           files: dist/${{ steps.names.outputs.binary }}
           generate_release_notes: ${{ runner.os == 'Linux' }}
         continue-on-error: true
