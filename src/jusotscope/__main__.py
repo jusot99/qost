@@ -1,10 +1,17 @@
 import argparse
+import importlib.metadata
 import signal
 import sys
 
 from rich.panel import Panel
 
 from jusotscope._shared.output import console
+
+
+try:
+    __version__ = importlib.metadata.version("jusotscope")
+except importlib.metadata.PackageNotFoundError:
+    __version__ = "0.1.1"
 
 
 HEADINGS = frozenset({
@@ -57,7 +64,7 @@ def main():
         """,
     )
     parser.add_argument(
-        "--version", "-V", action="version", version="jusotscope 0.1.0"
+        "--version", "-V", action="version", version=f"jusotscope {__version__}"
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
