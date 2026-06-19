@@ -1,5 +1,7 @@
 name: Build and Release
 
+# Triggered by version bumps in pyproject.toml
+
 on:
   push:
     branches: [main]
