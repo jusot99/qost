@@ -54,7 +54,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pyinstaller httpx dnspython rich ldap3
+          pip install pyinstaller httpx dnspython rich ldap3 pycryptodome
 
       - name: Set binary name
         id: names
@@ -80,6 +80,7 @@ jobs:
             --hidden-import httpx \
             --hidden-import rich \
             --hidden-import ldap3 \
+            --hidden-import Crypto \
             src/jusotscope/__main__.py
 
       - name: Upload binary

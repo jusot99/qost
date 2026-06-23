@@ -43,19 +43,21 @@ def _decode(val: Any) -> str:
 
 
 def _safe(entry: dict, attr: str) -> str:
-    raw = entry.get("attributes", {}).get(attr)
+    raw = entry.get(attr)
+    if isinstance(raw, list):
+        return _decode(raw[0]) if raw else ""
     if raw:
         return _decode(raw)
     return ""
 
 
 def _safe_list(entry: dict, attr: str) -> list[str]:
-    raw = entry.get("attributes", {}).get(attr)
-    if not raw:
-        return []
+    raw = entry.get(attr)
     if isinstance(raw, list):
         return [_decode(v) for v in raw]
-    return [_decode(raw)]
+    if raw:
+        return [_decode(raw)]
+    return []
 
 
 def enum_domain(target: str, domain: str, username: str = "", password: str = "") -> EnumResult:
@@ -121,7 +123,7 @@ def enum_domain(target: str, domain: str, username: str = "", password: str = ""
             ))
         return result
     for e in conn.entries:
-        entry = e.entry_as_dict
+        entry = e.entry_attributes_as_dict
         uac = int(_safe(entry, "userAccountControl") or "0")
         enabled = not bool(uac & 2)
         result.users.append({
@@ -140,7 +142,7 @@ def enum_domain(target: str, domain: str, username: str = "", password: str = ""
     # SPNs
     if _search("(&(objectClass=user)(servicePrincipalName=*))", ["sAMAccountName", "servicePrincipalName", "enabled", "userAccountControl"]):
         for e in conn.entries:
-            entry = e.entry_as_dict
+            entry = e.entry_attributes_as_dict
             uac = int(_safe(entry, "userAccountControl") or "0")
             enabled = not bool(uac & 2)
             for spn in _safe_list(entry, "servicePrincipalName"):
@@ -154,7 +156,7 @@ def enum_domain(target: str, domain: str, username: str = "", password: str = ""
     # AS-REP roastable
     if _search("(&(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=4194304))", ["sAMAccountName", "enabled", "userAccountControl"]):
         for e in conn.entries:
-            entry = e.entry_as_dict
+            entry = e.entry_attributes_as_dict
             uac = int(_safe(entry, "userAccountControl") or "0")
             enabled = not bool(uac & 2)
             result.asrep_users.append({
@@ -172,7 +174,7 @@ def enum_domain(target: str, domain: str, username: str = "", password: str = ""
     # Unconstrained delegation
     if _search("(userAccountControl:1.2.840.113556.1.4.803:=524288)", ["sAMAccountName", "dNSHostName", "userAccountControl"]):
         for e in conn.entries:
-            entry = e.entry_as_dict
+            entry = e.entry_attributes_as_dict
             result.unconstrained.append({
                 "name": _safe(entry, "sAMAccountName"),
                 "dns_hostname": _safe(entry, "dNSHostName"),
@@ -188,7 +190,7 @@ def enum_domain(target: str, domain: str, username: str = "", password: str = ""
     # Computers
     if _search("(objectClass=computer)", ["sAMAccountName", "dNSHostName", "operatingSystem", "operatingSystemVersion", "userAccountControl", "description"]):
         for e in conn.entries:
-            entry = e.entry_as_dict
+            entry = e.entry_attributes_as_dict
             uac = int(_safe(entry, "userAccountControl") or "0")
             enabled = not bool(uac & 2)
             result.computers.append({
@@ -203,7 +205,7 @@ def enum_domain(target: str, domain: str, username: str = "", password: str = ""
     # Groups
     if _search("(objectClass=group)", ["sAMAccountName", "description", "member", "distinguishedName"]):
         for e in conn.entries:
-            entry = e.entry_as_dict
+            entry = e.entry_attributes_as_dict
             result.groups.append({
                 "name": _safe(entry, "sAMAccountName"),
                 "description": _safe(entry, "description"),
@@ -213,7 +215,7 @@ def enum_domain(target: str, domain: str, username: str = "", password: str = ""
     # Domain Trusts
     if _search("(objectClass=trustedDomain)", ["cn", "trustAttributes", "trustDirection", "trustType", "trustPartner"]):
         for e in conn.entries:
-            entry = e.entry_as_dict
+            entry = e.entry_attributes_as_dict
             direction_map = {0: "Disabled", 1: "Inbound", 2: "Outbound", 3: "Bidirectional"}
             td = int(_safe(entry, "trustDirection") or "3")
             result.trusts.append({
