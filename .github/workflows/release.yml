@@ -67,6 +67,14 @@ jobs:
           fi
           echo "binary=${{ matrix.tool }}-${SUFFIX}" >> $GITHUB_OUTPUT
 
+      - name: Bake version into binary
+        shell: bash
+        run: |
+          VERSION=$(grep '^version' pyproject.toml | sed 's/.*"\(.*\)"/\1/')
+          cat > src/jusotscope/_version.py << EOF
+          __version__ = "${VERSION}"
+          EOF
+
       - name: Build binary
         shell: bash
         run: |

@@ -8,10 +8,13 @@ from rich.panel import Panel
 from jusotscope._shared.output import console
 
 
-try:
-    __version__ = importlib.metadata.version("jusotscope")
-except importlib.metadata.PackageNotFoundError:
-    __version__ = "0.1.1"
+if getattr(sys, "frozen", False):
+    from jusotscope._version import __version__
+else:
+    try:
+        __version__ = importlib.metadata.version("jusotscope")
+    except importlib.metadata.PackageNotFoundError:
+        from jusotscope._version import __version__
 
 
 HEADINGS = frozenset({
