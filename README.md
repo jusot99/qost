@@ -17,6 +17,7 @@
   <a href="https://github.com/jusot99/jusotscope/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" alt="License"></a>
   <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10%2B-blue?style=for-the-badge&logo=python" alt="Python"></a>
   <a href="https://github.com/jusot99/jusotscope/actions"><img src="https://img.shields.io/github/actions/workflow/status/jusot99/jusotscope/release.yml?style=for-the-badge&label=build" alt="Build"></a>
+  <a href="https://github.com/jusot99/jusotscope"><img src="https://img.shields.io/github/stars/jusot99/jusotscope?style=for-the-badge&label=stars&color=yellow" alt="Stars"></a>
 </p>
 
 <p><b>recon · scan · ad enum · report</b></p>
@@ -100,3 +101,7 @@ pip install -e .
 ## License
 
 MIT — Built and maintained by [Jusot](https://github.com/jusot99).
+
+---
+
+⭐ Star the repo if you find it useful — it helps others discover it too.
