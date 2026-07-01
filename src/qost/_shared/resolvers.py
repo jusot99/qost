@@ -1,6 +1,6 @@
 import os
 
-_ENV_VAR = "JUSOTSCOPE_RESOLVERS"
+_ENV_VAR = "QOST_RESOLVERS"
 _FALLBACK = ["8.8.8.8", "1.1.1.1", "9.9.9.9"]
 
 

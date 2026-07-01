@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from jusotscope.ad.enum import EnumResult, enum_domain
+from qost.ad.enum import EnumResult, enum_domain
 
 
 class FakeServerInfo:
@@ -53,7 +53,7 @@ class TestEnumDomain:
         return conn
 
     def test_connection_error_raises(self):
-        with patch("jusotscope.ad.enum.Server", side_effect=Exception("Connection failed")):
+        with patch("qost.ad.enum.Server", side_effect=Exception("Connection failed")):
             with pytest.raises(Exception, match="Connection failed"):
                 enum_domain("10.0.0.1", "test.local")
 
@@ -63,8 +63,8 @@ class TestEnumDomain:
         conn = self._mock_conn()
 
         with (
-            patch("jusotscope.ad.enum.Server", return_value=server),
-            patch("jusotscope.ad.enum.Connection", return_value=conn),
+            patch("qost.ad.enum.Server", return_value=server),
+            patch("qost.ad.enum.Connection", return_value=conn),
         ):
             result = enum_domain("10.0.0.1", "test.local")
             assert result.target == "10.0.0.1"
@@ -73,8 +73,8 @@ class TestEnumDomain:
     def test_anonymous_enum(self):
         conn = self._mock_conn()
         with (
-            patch("jusotscope.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
-            patch("jusotscope.ad.enum.Connection", return_value=conn),
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
         ):
             result = enum_domain("10.0.0.1", "test.local")
             assert result.authenticated is False
@@ -82,8 +82,8 @@ class TestEnumDomain:
     def test_authenticated_enum(self):
         conn = self._mock_conn()
         with (
-            patch("jusotscope.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
-            patch("jusotscope.ad.enum.Connection", return_value=conn),
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
         ):
             result = enum_domain("10.0.0.1", "test.local", "admin", "P@ssw0rd")
             assert result.authenticated is True
@@ -103,8 +103,8 @@ class TestEnumDomain:
         }
         conn = self._mock_conn([user_entry])
         with (
-            patch("jusotscope.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
-            patch("jusotscope.ad.enum.Connection", return_value=conn),
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
         ):
             result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
             assert len(result.users) == 1
@@ -116,8 +116,8 @@ class TestEnumDomain:
         conn = self._mock_conn(search_result=False)
         conn.result = {"description": "insufficientAccessRights", "message": "no access"}
         with (
-            patch("jusotscope.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
-            patch("jusotscope.ad.enum.Connection", return_value=conn),
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
         ):
             result = enum_domain("10.0.0.1", "corp.local")
             assert result.anonymous_restricted is True
@@ -136,8 +136,8 @@ class TestEnumDomain:
         }
         conn = self._mock_conn([comp_entry])
         with (
-            patch("jusotscope.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
-            patch("jusotscope.ad.enum.Connection", return_value=conn),
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
         ):
             result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
             assert len(result.computers) == 1
@@ -158,8 +158,8 @@ class TestEnumDomain:
         }
         conn = self._mock_conn([user_entry])
         with (
-            patch("jusotscope.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
-            patch("jusotscope.ad.enum.Connection", return_value=conn),
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
         ):
             result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
             assert result.authenticated is True
@@ -173,8 +173,8 @@ class TestEnumDomain:
         }
         conn = self._mock_conn([spn_entry])
         with (
-            patch("jusotscope.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
-            patch("jusotscope.ad.enum.Connection", return_value=conn),
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
         ):
             result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
             assert len(result.spns) == 1
@@ -188,8 +188,8 @@ class TestEnumDomain:
         }
         conn = self._mock_conn([asrep_entry])
         with (
-            patch("jusotscope.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
-            patch("jusotscope.ad.enum.Connection", return_value=conn),
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
         ):
             result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
             assert len(result.asrep_users) == 1
@@ -205,8 +205,8 @@ class TestEnumDomain:
         }
         conn = self._mock_conn([ucd_entry])
         with (
-            patch("jusotscope.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
-            patch("jusotscope.ad.enum.Connection", return_value=conn),
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
         ):
             result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
             assert len(result.unconstrained) == 1
@@ -223,8 +223,8 @@ class TestEnumDomain:
         }
         conn = self._mock_conn([group_entry])
         with (
-            patch("jusotscope.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
-            patch("jusotscope.ad.enum.Connection", return_value=conn),
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
         ):
             result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
             assert len(result.groups) == 1
@@ -241,8 +241,8 @@ class TestEnumDomain:
         }
         conn = self._mock_conn([trust_entry])
         with (
-            patch("jusotscope.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
-            patch("jusotscope.ad.enum.Connection", return_value=conn),
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
         ):
             result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
             assert len(result.trusts) == 1
@@ -252,8 +252,8 @@ class TestEnumDomain:
     def test_asrep_zero_still_adds_finding(self):
         conn = self._mock_conn([])
         with (
-            patch("jusotscope.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
-            patch("jusotscope.ad.enum.Connection", return_value=conn),
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
         ):
             result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
             assert len(result.asrep_users) == 0

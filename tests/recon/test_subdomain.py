@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from jusotscope.recon.subdomain import crtsh_search, alienvault_search, rapiddns_search, find_subdomains
+from qost.recon.subdomain import crtsh_search, alienvault_search, rapiddns_search, find_subdomains
 
 
 def _mock_response(**kwargs):
@@ -80,9 +80,9 @@ class TestRapidDNSSearch:
 class TestFindSubdomains:
     async def test_aggregates_all_sources(self):
         with (
-            patch("jusotscope.recon.subdomain.crtsh_search", new=AsyncMock(return_value=["a.example.com"])),
-            patch("jusotscope.recon.subdomain.alienvault_search", new=AsyncMock(return_value=["b.example.com"])),
-            patch("jusotscope.recon.subdomain.rapiddns_search", new=AsyncMock(return_value=["c.example.com"])),
+            patch("qost.recon.subdomain.crtsh_search", new=AsyncMock(return_value=["a.example.com"])),
+            patch("qost.recon.subdomain.alienvault_search", new=AsyncMock(return_value=["b.example.com"])),
+            patch("qost.recon.subdomain.rapiddns_search", new=AsyncMock(return_value=["c.example.com"])),
         ):
             results = await find_subdomains("example.com")
             assert len(results) == 3
@@ -92,9 +92,9 @@ class TestFindSubdomains:
 
     async def test_deduplicates(self):
         with (
-            patch("jusotscope.recon.subdomain.crtsh_search", new=AsyncMock(return_value=["a.example.com", "a.example.com"])),
-            patch("jusotscope.recon.subdomain.alienvault_search", new=AsyncMock(return_value=[])),
-            patch("jusotscope.recon.subdomain.rapiddns_search", new=AsyncMock(return_value=[])),
+            patch("qost.recon.subdomain.crtsh_search", new=AsyncMock(return_value=["a.example.com", "a.example.com"])),
+            patch("qost.recon.subdomain.alienvault_search", new=AsyncMock(return_value=[])),
+            patch("qost.recon.subdomain.rapiddns_search", new=AsyncMock(return_value=[])),
         ):
             results = await find_subdomains("example.com")
             assert len(results) == 1

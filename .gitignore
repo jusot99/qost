@@ -9,7 +9,7 @@ build/
 venv/
 .env
 *.local
-src/jusotscope/_version.py
+src/qost/_version.py
 .coverage
 .mypy_cache/
 .pytest_cache/

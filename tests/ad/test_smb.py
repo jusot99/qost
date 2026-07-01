@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 
-from jusotscope.ad.smb import (
+from qost.ad.smb import (
     _smb2_header,
     _ntlmssp_negotiate,
     check_null_session,

@@ -1,23 +1,23 @@
 from unittest.mock import MagicMock, patch
 
 
-from jusotscope.recon.security import check_spf_dmarc, check_dnssec, check_takeover, Vuln
+from qost.recon.security import check_spf_dmarc, check_dnssec, check_takeover, Vuln
 
 
 class TestCheckSPFDMARC:
     def test_no_spf_record(self):
         """No SPF in TXT records should flag Missing SPF."""
-        with patch("jusotscope.recon.security.query_records", return_value=(None, None)):
+        with patch("qost.recon.security.query_records", return_value=(None, None)):
             results = check_spf_dmarc("example.com", [])
             assert any(v.type == "Missing SPF Record" for v in results)
 
     def test_weak_spf_all(self):
-        with patch("jusotscope.recon.security.query_records", return_value=(None, None)):
+        with patch("qost.recon.security.query_records", return_value=(None, None)):
             results = check_spf_dmarc("example.com", ['v=spf1 +all'])
             assert any(v.type == "Weak SPF Policy" for v in results)
 
     def test_weak_spf_question(self):
-        with patch("jusotscope.recon.security.query_records", return_value=(None, None)):
+        with patch("qost.recon.security.query_records", return_value=(None, None)):
             results = check_spf_dmarc("example.com", ['v=spf1 ?all'])
             assert any(v.type == "Neutral SPF Policy" for v in results)
 
@@ -38,7 +38,7 @@ class TestCheckSPFDMARC:
                 return ([mock_dkim_answer], None)
             return (None, None)
 
-        with patch("jusotscope.recon.security.query_records", side_effect=fake_query):
+        with patch("qost.recon.security.query_records", side_effect=fake_query):
             results = check_spf_dmarc("example.com", ['v=spf1 -all'])
             spf_missing = [v for v in results if v.type == "Missing SPF Record"]
             dmarc_missing = [v for v in results if v.type == "Missing DMARC Record"]
@@ -50,7 +50,7 @@ class TestCheckSPFDMARC:
         mock_dmarc_answer.to_text.return_value = "v=DMARC1; p=quarantine;"
         mock_dmarc_answer.__str__.return_value = "v=DMARC1; p=quarantine;"
 
-        with patch("jusotscope.recon.security.query_records", return_value=([mock_dmarc_answer], None)):
+        with patch("qost.recon.security.query_records", return_value=([mock_dmarc_answer], None)):
             results = check_spf_dmarc("example.com", ['v=spf1 -all'])
             dmarc_missing = [v for v in results if v.type == "Missing DMARC Record"]
             assert len(dmarc_missing) == 0
@@ -74,24 +74,24 @@ class TestCheckTakeover:
         assert len(results) == 0
 
     def test_cname_resolves(self):
-        with patch("jusotscope.recon.security.resolve_ip", return_value="1.2.3.4"):
+        with patch("qost.recon.security.resolve_ip", return_value="1.2.3.4"):
             results = check_takeover(["alias.example.com."])
             assert len(results) == 0
 
     def test_takeover_detected_for_aws(self):
-        with patch("jusotscope.recon.security.resolve_ip", return_value=None):
+        with patch("qost.recon.security.resolve_ip", return_value=None):
             results = check_takeover(["myapp.s3.amazonaws.com."])
             takovers = [v for v in results if "takeover" in v.type.lower()]
             assert len(takovers) >= 1
 
     def test_known_cloud_target(self):
-        with patch("jusotscope.recon.security.resolve_ip", return_value=None):
+        with patch("qost.recon.security.resolve_ip", return_value=None):
             results = check_takeover(["myapp.azurewebsites.net."])
             takovers = [v for v in results if "takeover" in v.type.lower()]
             assert len(takovers) >= 1
 
     def test_no_match_not_takeover(self):
-        with patch("jusotscope.recon.security.resolve_ip", return_value=None):
+        with patch("qost.recon.security.resolve_ip", return_value=None):
             results = check_takeover(["random.example.com."])
             assert len(results) == 0
 
@@ -109,13 +109,13 @@ class TestCheckTakeover:
                 return ([mock_dkim_answer], None)
             return (None, None)
 
-        with patch("jusotscope.recon.security.query_records", side_effect=fake_query):
+        with patch("qost.recon.security.query_records", side_effect=fake_query):
             results = check_spf_dmarc("example.com", ['v=spf1 -all'])
             dkim_missing = [v for v in results if v.type == "DKIM Not Detected"]
             assert len(dkim_missing) == 0
 
     def test_dkim_not_detected(self):
-        with patch("jusotscope.recon.security.query_records", return_value=(None, None)):
+        with patch("qost.recon.security.query_records", return_value=(None, None)):
             results = check_spf_dmarc("example.com", ['v=spf1 -all'])
             dkim_missing = [v for v in results if v.type == "DKIM Not Detected"]
             assert len(dkim_missing) == 1

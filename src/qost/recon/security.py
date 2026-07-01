@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from jusotscope.recon.scanner import query_records
-from jusotscope.recon.utils import resolve_ip
+from qost.recon.scanner import query_records
+from qost.recon.utils import resolve_ip
 
 
 CLOUD_TARGETS = {

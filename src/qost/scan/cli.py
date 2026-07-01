@@ -4,8 +4,8 @@ import json
 import time
 from pathlib import Path
 
-from jusotscope._shared.output import console
-from jusotscope.scan.scanner import (
+from qost._shared.output import console
+from qost.scan.scanner import (
     DEFAULT_PORTS,
     parse_ports,
     resolve_host,
@@ -49,7 +49,7 @@ async def _run(args: argparse.Namespace):
         )
         console.print(Panel(
             Group(info),
-            title="jusotscope scan",
+            title="qost scan",
             border_style="cyan",
             box=box.ROUNDED,
             width=80,

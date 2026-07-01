@@ -5,16 +5,16 @@ import sys
 
 from rich.panel import Panel
 
-from jusotscope._shared.output import console
+from qost._shared.output import console
 
 
 if getattr(sys, "frozen", False):
-    from jusotscope._version import __version__
+    from qost._version import __version__
 else:
     try:
-        __version__ = importlib.metadata.version("jusotscope")
+        __version__ = importlib.metadata.version("qost")
     except importlib.metadata.PackageNotFoundError:
-        from jusotscope._version import __version__
+        from qost._version import __version__
 
 
 HEADINGS = frozenset({
@@ -39,7 +39,7 @@ class _ColoredParser(argparse.ArgumentParser):
                 colored.append(line)
         console.print(Panel(
             "\n".join(colored),
-            title="[bold cyan]jusotscope[/]",
+            title="[bold cyan]qost[/]",
             border_style="cyan",
             width=80,
         ))
@@ -47,38 +47,38 @@ class _ColoredParser(argparse.ArgumentParser):
     def error(self, message):
         console.print(f"\n[bold red]✖[/] [red]{message}[/]")
         if "required" in message.lower():
-            console.print("[dim]Tip: run [bold]jusotscope --help[/] for usage[/]")
+            console.print("[dim]Tip: run [bold]qost --help[/] for usage[/]")
         sys.exit(2)
 
 
 def main():
     parser = _ColoredParser(
-        prog="jusotscope",
-        description="Unified offensive security toolkit - recon, scanning, AD, reporting",
+        prog="qost",
+        description="Quick Offensive Security Toolkit",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Examples:
-  jusotscope recon example.com
-  jusotscope recon example.com --brute --json
-  jusotscope recon 8.8.8.8
-  jusotscope scan example.com
-  jusotscope scan example.com -p 22,80,443 --json
-  jusotscope ad enum 10.10.10.1 -d corp.local
-  jusotscope ad enum 10.10.10.1 -d corp.local -u admin -p P@ssw0rd --json
+  qost recon example.com
+  qost recon example.com --brute --json
+  qost recon 8.8.8.8
+  qost scan example.com
+  qost scan example.com -p 22,80,443 --json
+  qost ad enum 10.10.10.1 -d corp.local
+  qost ad enum 10.10.10.1 -d corp.local -u admin -p P@ssw0rd --json
         """,
     )
     parser.add_argument(
-        "--version", "-V", action="version", version=f"jusotscope {__version__}"
+        "--version", "-V", action="version", version=f"qost {__version__}"
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    from jusotscope.recon import cli as recon_cli
+    from qost.recon import cli as recon_cli
     recon_cli.register(subparsers)
 
-    from jusotscope.scan import cli as scan_cli
+    from qost.scan import cli as scan_cli
     scan_cli.register(subparsers)
 
-    from jusotscope.ad import cli as ad_cli
+    from qost.ad import cli as ad_cli
     ad_cli.register(subparsers)
 
     def handler(sig, frame):

@@ -5,8 +5,8 @@ import dns.query
 import dns.zone
 import dns.rdatatype
 
-from jusotscope._shared.resolvers import DEFAULT_RESOLVERS
-from jusotscope.recon.utils import is_ip
+from qost._shared.resolvers import DEFAULT_RESOLVERS
+from qost.recon.utils import is_ip
 
 
 def query_records(domain: str, rtype: str, resolvers: list[str] | None = None) -> tuple[Any, str | None]:

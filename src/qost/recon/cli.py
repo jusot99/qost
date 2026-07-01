@@ -11,12 +11,12 @@ from typing import Any
 
 import httpx
 
-from jusotscope._shared.output import (
+from qost._shared.output import (
     console,
     panel,
 )
-from jusotscope.recon import portscan, scanner, security, subdomain, utils
-from jusotscope.recon.utils import is_ip
+from qost.recon import portscan, scanner, security, subdomain, utils
+from qost.recon.utils import is_ip
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +132,7 @@ async def _run(args: argparse.Namespace):
         scan_mode = "Full Reconnaissance" if brute else "Standard"
         summary.add_row(f"[bold cyan]Mode:[/] [green]{scan_mode}")
         panel(
-            "jusotscope recon",
+            "qost recon",
             Group(Markdown("### Ghost DNS Recon"), Rule(style="dim"), summary),
             border="cyan",
             width=80,

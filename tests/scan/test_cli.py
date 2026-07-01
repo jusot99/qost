@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from jusotscope.scan import cli
+from qost.scan import cli
 
 
 class TestRegister:
@@ -32,7 +32,7 @@ class TestRun:
             silent=False, json_out=False, output=None,
             timeout=3.0, concurrency=50,
         )
-        with patch("jusotscope.scan.cli.asyncio.run") as mock_arun:
+        with patch("qost.scan.cli.asyncio.run") as mock_arun:
             mock_arun.side_effect = lambda coro: coro.close()
             cli.run(mock_ns)
             mock_arun.assert_called_once()
@@ -46,8 +46,8 @@ class TestRun:
             timeout=3.0, concurrency=50,
         )
         with (
-            patch("jusotscope.scan.cli.resolve_host", return_value="1.2.3.4"),
-            patch("jusotscope.scan.cli.scan_ports", new=AsyncMock(return_value=[])),
+            patch("qost.scan.cli.resolve_host", return_value="1.2.3.4"),
+            patch("qost.scan.cli.scan_ports", new=AsyncMock(return_value=[])),
         ):
             await cli._run(mock_ns)
         recwarn.clear()
@@ -60,8 +60,8 @@ class TestRun:
             timeout=3.0, concurrency=50,
         )
         with (
-            patch("jusotscope.scan.cli.resolve_host", return_value=None),
-            patch("jusotscope.scan.cli.console.print") as mock_print,
+            patch("qost.scan.cli.resolve_host", return_value=None),
+            patch("qost.scan.cli.console.print") as mock_print,
         ):
             await cli._run(mock_ns)
             mock_print.assert_called_once_with("[red]Could not resolve:[/] nonexistent.invalid")

@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 
-from jusotscope.recon.portscan import scan, COMMON_PORTS
+from qost.recon.portscan import scan, COMMON_PORTS
 
 
 class TestScan:

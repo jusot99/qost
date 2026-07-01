@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from jusotscope.scan.scanner import (
+from qost.scan.scanner import (
     parse_ports,
     service_name,
     check_port,
@@ -97,7 +97,7 @@ class TestCheckPort:
 class TestScanPorts:
     async def test_scan_multiple_ports(self):
         with (
-            patch("jusotscope.scan.scanner.resolve_host", return_value="8.8.8.8"),
+            patch("qost.scan.scanner.resolve_host", return_value="8.8.8.8"),
             patch("asyncio.open_connection", side_effect=ConnectionRefusedError),
         ):
             results = await scan_ports("8.8.8.8", [22, 80, 443])
@@ -105,7 +105,7 @@ class TestScanPorts:
             assert all(r["state"] == "closed" for r in results)
 
     async def test_scan_unresolvable(self):
-        with patch("jusotscope.scan.scanner.resolve_host", return_value=None):
+        with patch("qost.scan.scanner.resolve_host", return_value=None):
             results = await scan_ports("nonexistent.invalid", [80])
             assert results == []
 
@@ -120,7 +120,7 @@ class TestScanPorts:
             raise ConnectionRefusedError
 
         with (
-            patch("jusotscope.scan.scanner.resolve_host", return_value="10.0.0.1"),
+            patch("qost.scan.scanner.resolve_host", return_value="10.0.0.1"),
             patch("asyncio.open_connection", new=fake_open_conn),
         ):
             results = await scan_ports("10.0.0.1", [22, 80])

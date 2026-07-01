@@ -1,6 +1,6 @@
 
 
-from jusotscope.ad.enum import _decode, _safe, _safe_list, Finding, EnumResult
+from qost.ad.enum import _decode, _safe, _safe_list, Finding, EnumResult
 
 
 class TestDecode:
@@ -62,5 +62,5 @@ class TestEnumResult:
         assert r.findings == []
 
     def test_smb_check_import(self):
-        from jusotscope.ad.smb import check_null_session
+        from qost.ad.smb import check_null_session
         assert callable(check_null_session)

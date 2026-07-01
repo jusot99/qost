@@ -1,29 +1,29 @@
 from unittest.mock import patch
 
 
-from jusotscope._shared.output import panel, table, tree_node, render_json, render_markdown
+from qost._shared.output import panel, table, tree_node, render_json, render_markdown
 
 
 class TestPanel:
     def test_basic_panel(self):
-        with patch("jusotscope._shared.output.console.print") as mock:
+        with patch("qost._shared.output.console.print") as mock:
             panel("Title", "Content")
             mock.assert_called_once()
 
     def test_panel_with_list(self):
-        with patch("jusotscope._shared.output.console.print") as mock:
+        with patch("qost._shared.output.console.print") as mock:
             panel("Title", ["a", "b"])
             mock.assert_called_once()
 
 
 class TestTable:
     def test_table_basic(self):
-        with patch("jusotscope._shared.output.console.print") as mock:
+        with patch("qost._shared.output.console.print") as mock:
             table("Test", [("Name", "bold"), ("Value", "dim")], [["a", "1"], ["b", "2"]])
             mock.assert_called_once()
 
     def test_table_empty_rows(self):
-        with patch("jusotscope._shared.output.console.print") as mock:
+        with patch("qost._shared.output.console.print") as mock:
             table("Test", [("Name", "bold"), ("Value", "dim")], [])
             mock.assert_called_once()
 
@@ -63,6 +63,6 @@ class TestRenderJSON:
 
 class TestRenderMarkdown:
     def test_basic_markdown(self):
-        with patch("jusotscope._shared.output.console.print") as mock:
+        with patch("qost._shared.output.console.print") as mock:
             render_markdown("# Hello")
             mock.assert_called_once()

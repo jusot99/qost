@@ -37,13 +37,13 @@ jobs:
         shell: bash
         run: |
           VERSION=$(grep '^version' pyproject.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          cat > src/jusotscope/_version.py << EOF
+          cat > src/qost/_version.py << EOF
           __version__ = "${VERSION}"
           EOF
 
           uv sync
           uv run --with pyinstaller pyinstaller --onefile \
-            --name jusotscope \
+            --name qost \
             --hidden-import dns.asyncresolver \
             --hidden-import dns.asyncquery \
             --hidden-import dns.resolver \
@@ -52,22 +52,22 @@ jobs:
             --hidden-import httpx \
             --hidden-import rich \
             --hidden-import ldap3 \
-            src/jusotscope/__main__.py
+            src/qost/__main__.py
 
           mkdir -p dist/release
 
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            cp dist/jusotscope.exe "dist/release/jusotscope-${VERSION}-${{ matrix.target }}.exe"
-            (cd dist/release && 7z a "jusotscope-${VERSION}-${{ matrix.target }}.zip" "jusotscope-${VERSION}-${{ matrix.target }}.exe")
+            cp dist/qost.exe "dist/release/qost-${VERSION}-${{ matrix.target }}.exe"
+            (cd dist/release && 7z a "qost-${VERSION}-${{ matrix.target }}.zip" "qost-${VERSION}-${{ matrix.target }}.exe")
           else
-            cp dist/jusotscope "dist/release/jusotscope-${VERSION}-${{ matrix.target }}"
-            chmod +x "dist/release/jusotscope-${VERSION}-${{ matrix.target }}"
-            tar -C dist/release -czvf "dist/release/jusotscope-${VERSION}-${{ matrix.target }}.tar.gz" "jusotscope-${VERSION}-${{ matrix.target }}"
+            cp dist/qost "dist/release/qost-${VERSION}-${{ matrix.target }}"
+            chmod +x "dist/release/qost-${VERSION}-${{ matrix.target }}"
+            tar -C dist/release -czvf "dist/release/qost-${VERSION}-${{ matrix.target }}.tar.gz" "qost-${VERSION}-${{ matrix.target }}"
           fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: jusotscope-${{ matrix.target }}
+          name: qost-${{ matrix.target }}
           path: |
             dist/release/*.tar.gz
             dist/release/*.zip

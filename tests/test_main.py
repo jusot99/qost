@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from jusotscope.__main__ import __version__, _ColoredParser
+from qost.__main__ import __version__, _ColoredParser
 
 
 class TestVersion:
@@ -22,14 +22,14 @@ class TestVersion:
 class TestArgParseHelp:
     def test_argparse_help_renders(self):
         parser = _ColoredParser(prog="testprog")
-        with patch("jusotscope.__main__.console.print") as mock:
+        with patch("qost.__main__.console.print") as mock:
             parser.print_help()
             mock.assert_called_once()
 
     def test_version_arg_exists(self):
         parser = _ColoredParser(prog="testprog")
         parser.add_argument("--version", action="version", version="1.0")
-        with patch("jusotscope.__main__.console.print"):
+        with patch("qost.__main__.console.print"):
             version_actions = [a for a in parser._actions if hasattr(a, "version")]
             assert len(version_actions) == 1
 
@@ -37,46 +37,46 @@ class TestArgParseHelp:
 class TestMain:
     def test_main_no_args_exits(self):
         with (
-            patch("jusotscope.__main__.console.print"),
+            patch("qost.__main__.console.print"),
             pytest.raises(SystemExit),
         ):
-            from jusotscope.__main__ import main
-            with patch("sys.argv", ["jusotscope"]):
+            from qost.__main__ import main
+            with patch("sys.argv", ["qost"]):
                 main()
 
     def test_main_recon_dispatches(self):
         mock_func = MagicMock()
         with (
-            patch("jusotscope.__main__.console.print"),
-            patch("jusotscope.__main__._ColoredParser.parse_args",
+            patch("qost.__main__.console.print"),
+            patch("qost.__main__._ColoredParser.parse_args",
                   return_value=MagicMock(func=mock_func)),
         ):
-            from jusotscope.__main__ import main
-            with patch("sys.argv", ["jusotscope", "recon", "example.com"]):
+            from qost.__main__ import main
+            with patch("sys.argv", ["qost", "recon", "example.com"]):
                 main()
                 mock_func.assert_called_once()
 
     def test_main_scan_dispatches(self):
         mock_func = MagicMock()
         with (
-            patch("jusotscope.__main__.console.print"),
-            patch("jusotscope.__main__._ColoredParser.parse_args",
+            patch("qost.__main__.console.print"),
+            patch("qost.__main__._ColoredParser.parse_args",
                   return_value=MagicMock(func=mock_func)),
         ):
-            from jusotscope.__main__ import main
-            with patch("sys.argv", ["jusotscope", "scan", "example.com"]):
+            from qost.__main__ import main
+            with patch("sys.argv", ["qost", "scan", "example.com"]):
                 main()
                 mock_func.assert_called_once()
 
     def test_main_ad_dispatches(self):
         mock_func = MagicMock()
         with (
-            patch("jusotscope.__main__.console.print"),
-            patch("jusotscope.__main__._ColoredParser.parse_args",
+            patch("qost.__main__.console.print"),
+            patch("qost.__main__._ColoredParser.parse_args",
                   return_value=MagicMock(func=mock_func)),
         ):
-            from jusotscope.__main__ import main
-            with patch("sys.argv", ["jusotscope", "ad", "enum", "10.0.0.1"]):
+            from qost.__main__ import main
+            with patch("sys.argv", ["qost", "ad", "enum", "10.0.0.1"]):
                 main()
                 mock_func.assert_called_once()
 
@@ -85,12 +85,12 @@ class TestSignalHandler:
     def test_sigint_propagates(self, recwarn):
         mock_func = MagicMock(side_effect=KeyboardInterrupt)
         with (
-            patch("jusotscope.__main__.console.print"),
-            patch("jusotscope.__main__._ColoredParser.parse_args",
+            patch("qost.__main__.console.print"),
+            patch("qost.__main__._ColoredParser.parse_args",
                   return_value=MagicMock(func=mock_func)),
             pytest.raises(KeyboardInterrupt),
         ):
-            from jusotscope.__main__ import main
-            with patch("sys.argv", ["jusotscope", "recon", "x"]):
+            from qost.__main__ import main
+            with patch("sys.argv", ["qost", "recon", "x"]):
                 main()
         recwarn.clear()

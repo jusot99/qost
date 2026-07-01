@@ -1,23 +1,23 @@
 <div align="center">
 <pre>
-▄▄▄██▀▀▀█    ██   ██████  ▒█████ ▄▄▄█████▓  ██████  ▄████▄   ▒█████   ██▓███  ▓█████ 
-   ▒██   ██  ▓██▒▒██    ▒ ▒██▒  ██▒▓  ██▒ ▓▒▒██    ▒ ▒██▀ ▀█  ▒██▒  ██▒▓██░  ██▒▓█   ▀ 
-   ░██  ▓██  ▒██░░ ▓██▄   ▒██░  ██▒▒ ▓██░ ▒░░ ▓██▄   ▒▓█    ▄ ▒██░  ██▒▓██░ ██▓▒▒███   
-▓██▄██▓ ▓▓█  ░██░  ▒   ██▒▒██   ██░░ ▓██▓ ░   ▒   ██▒▒▓▓▄ ▄██▒▒██   ██░▒██▄█▓▒ ▒▒▓█  ▄ 
- ▓███▒  ▒▒█████▓ ▒██████▒▒░ ████▓▒░  ▒██▒ ░ ▒██████▒▒▒ ▓███▀ ░░ ████▓▒░▒██▒ ░  ░░▒████▒
- ▒▓▒▒░  ░▒▓▒ ▒ ▒ ▒ ▒▓▒ ▒ ░░ ▒░▒░▒░   ▒ ░░   ▒ ▒▓▒ ▒ ░░ ░▒ ▒  ░░ ▒░▒░▒░ ▒▓▒░ ░  ░░░ ▒░ ░
- ▒ ░▒░  ░░▒░ ░ ░ ░ ░▒  ░ ░  ░ ▒ ▒░     ░    ░ ░▒  ░ ░  ░  ▒     ░ ▒ ▒░ ░▒ ░      ░ ░  ░
- ░ ░ ░   ░░░ ░ ░ ░  ░  ░  ░ ░ ░ ▒    ░      ░  ░  ░  ░        ░ ░ ░ ▒  ░░          ░   
- ░   ░     ░           ░      ░ ░                 ░  ░ ░          ░ ░              ░  ░
-                                                     ░ 
+  █████   ▒█████    ██████ ▄▄▄█████▓
+▒██▓  ██▒▒██▒  ██▒▒██    ▒ ▓  ██▒ ▓▒
+▒██▒  ██░▒██░  ██▒░ ▓██▄   ▒ ▓██░ ▒░
+░██  █▀ ░▒██   ██░  ▒   ██▒░ ▓██▓ ░
+░▒███▒█▄ ░ ████▓▒░▒██████▒▒  ▒██▒ ░
+░░ ▒▒░ ▒ ░ ▒░▒░▒░ ▒ ▒▓▒ ▒ ░  ▒ ░░
+ ░ ▒░  ░   ░ ▒ ▒░ ░ ░▒  ░ ░    ░
+   ░   ░ ░ ░ ░ ▒  ░  ░  ░    ░
+    ░        ░ ░        ░
+
 </pre>
 
 <p>
-  <a href="https://github.com/jusot99/jusotscope/releases"><img src="https://img.shields.io/github/v/release/jusot99/jusotscope?style=for-the-badge&label=version&color=blue" alt="Version"></a>
-  <a href="https://github.com/jusot99/jusotscope/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" alt="License"></a>
+  <a href="https://github.com/jusot99/qost/releases"><img src="https://img.shields.io/github/v/release/jusot99/qost?style=for-the-badge&label=version&color=blue" alt="Version"></a>
+  <a href="https://github.com/jusot99/qost/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" alt="License"></a>
   <a href="https://www.python.org"><img src="https://img.shields.io/badge/python-3.10%2B-blue?style=for-the-badge&logo=python" alt="Python"></a>
-  <a href="https://github.com/jusot99/jusotscope/actions"><img src="https://img.shields.io/github/actions/workflow/status/jusot99/jusotscope/release.yml?style=for-the-badge&label=build" alt="Build"></a>
-  <a href="https://github.com/jusot99/jusotscope"><img src="https://img.shields.io/github/stars/jusot99/jusotscope?style=for-the-badge&label=stars&color=yellow" alt="Stars"></a>
+  <a href="https://github.com/jusot99/qost/actions"><img src="https://img.shields.io/github/actions/workflow/status/jusot99/qost/release.yml?style=for-the-badge&label=build" alt="Build"></a>
+  <a href="https://github.com/jusot99/qost"><img src="https://img.shields.io/github/stars/jusot99/qost?style=for-the-badge&label=stars&color=yellow" alt="Stars"></a>
 </p>
 
 <p><b>recon · scan · ad enum · report</b></p>
@@ -46,26 +46,26 @@
 ## Quick Start
 
 ```bash
-pip install git+https://github.com/jusot99/jusotscope.git
+pip install git+https://github.com/jusot99/qost.git
 
 # DNS reconnaissance with subdomain brute-forcing
-jusotscope recon example.com --brute
+qost recon example.com --brute
 
 # Port scan a range
-jusotscope scan example.com -p 1-1000
+qost scan example.com -p 1-1000
 
 # Active Directory enumeration (anonymous)
-jusotscope ad enum 10.10.10.1 -d corp.local
+qost ad enum 10.10.10.1 -d corp.local
 
 # Active Directory enumeration (authenticated)
-jusotscope ad enum 10.10.10.1 -d corp.local -u admin -p P@ssw0rd
+qost ad enum 10.10.10.1 -d corp.local -u admin -p P@ssw0rd
 
 # Export results as JSON or Markdown
-jusotscope recon example.com --json
-jusotscope recon example.com -o report.md
+qost recon example.com --json
+qost recon example.com -o report.md
 ```
 
-> Pre-built binaries are on the [releases page](https://github.com/jusot99/jusotscope/releases).
+> Pre-built binaries are on the [releases page](https://github.com/jusot99/qost/releases).
 
 ## Commands
 
@@ -88,8 +88,8 @@ All subcommands support these global flags:
 ## Install from Source
 
 ```bash
-git clone https://github.com/jusot99/jusotscope.git
-cd jusotscope
+git clone https://github.com/jusot99/qost.git
+cd qost
 pip install -e .
 ```
 

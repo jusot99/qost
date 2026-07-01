@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 
-from jusotscope.recon.scanner import query_records, resolve_all, zone_transfer, format_rdata, _clean
+from qost.recon.scanner import query_records, resolve_all, zone_transfer, format_rdata, _clean
 
 
 class TestClean:
@@ -91,7 +91,7 @@ class TestQueryRecords:
 
         with (
             patch("dns.resolver.Resolver", return_value=mock_resolver),
-            patch("jusotscope.recon.scanner.DEFAULT_RESOLVERS", ["1.1.1.1"]),
+            patch("qost.recon.scanner.DEFAULT_RESOLVERS", ["1.1.1.1"]),
         ):
             answers, error = query_records("example.com", "A")
             # Since resolvers list is ["1.1.1.1"] and it raises, we get fallback msg
@@ -104,7 +104,7 @@ class TestQueryRecords:
 
         with (
             patch("dns.resolver.Resolver", return_value=mock_resolver),
-            patch("jusotscope.recon.scanner.DEFAULT_RESOLVERS", ["1.1.1.1"]),
+            patch("qost.recon.scanner.DEFAULT_RESOLVERS", ["1.1.1.1"]),
         ):
             answers, error = query_records("nonexistent.invalid", "A")
             assert error == "All resolvers failed"
@@ -134,7 +134,7 @@ class TestQueryRecords:
 
 class TestResolveAll:
     def test_resolves_all_types(self):
-        with patch("jusotscope.recon.scanner.query_records") as mock_query:
+        with patch("qost.recon.scanner.query_records") as mock_query:
             mock_query.return_value = (["data"], None)
             result = resolve_all("example.com")
             assert "A" in result
@@ -142,7 +142,7 @@ class TestResolveAll:
             assert "NS" in result
 
     def test_is_ip_only_a(self):
-        with patch("jusotscope.recon.scanner.query_records") as mock_query:
+        with patch("qost.recon.scanner.query_records") as mock_query:
             mock_query.return_value = (["1.2.3.4"], None)
             result = resolve_all("8.8.8.8")
             assert "A" in result

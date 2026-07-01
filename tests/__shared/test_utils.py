@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 
-from jusotscope._shared.utils import is_ip, resolve_ip, resolve_all_ips
+from qost._shared.utils import is_ip, resolve_ip, resolve_all_ips
 
 
 class TestIsIP:
@@ -33,7 +33,7 @@ class TestResolveIP:
             assert result == "8.8.8.8"
 
     def test_resolve_ip_passthrough(self):
-        with patch("jusotscope._shared.utils.is_ip", return_value=True):
+        with patch("qost._shared.utils.is_ip", return_value=True):
             result = resolve_ip("8.8.8.8")
             assert result == "8.8.8.8"
 

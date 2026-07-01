@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "jusotscope"
+name = "qost"
 version = "0.1.4"
-description = "Unified offensive security toolkit, recon, scanning, AD, reporting"
+description = "Quick Offensive Security Toolkit"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
@@ -26,13 +26,13 @@ dev = [
 ]
 
 [project.scripts]
-jusotscope = "jusotscope.__main__:main"
+qost = "qost.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-jusotscope = ["wordlists/*"]
+qost = ["wordlists/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -43,7 +43,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["jusotscope"]
+source = ["qost"]
 omit = ["*/tests/*"]
 
 [tool.coverage.report]

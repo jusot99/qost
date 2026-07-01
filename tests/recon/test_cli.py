@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from jusotscope.recon import cli
+from qost.recon import cli
 
 
 class TestRegister:
@@ -32,7 +32,7 @@ class TestRun:
             silent=False, json_out=False, output=None,
             resolver=None, verify=False,
         )
-        with patch("jusotscope.recon.cli.asyncio.run") as mock_arun:
+        with patch("qost.recon.cli.asyncio.run") as mock_arun:
             mock_arun.side_effect = lambda coro: coro.close()
             cli.run(mock_ns)
             mock_arun.assert_called_once()
@@ -46,15 +46,15 @@ class TestRun:
             resolver=None, verify=False,
         )
         with (
-            patch("jusotscope.recon.cli.utils.resolve_ip", return_value="1.2.3.4"),
-            patch("jusotscope.recon.cli.scanner.resolve_all", return_value={}),
-            patch("jusotscope.recon.cli.subdomain.find_subdomains", new=AsyncMock(return_value=[])),
-            patch("jusotscope.recon.cli.portscan.scan", return_value=[]),
-            patch("jusotscope.recon.cli.enrich_asn", new=AsyncMock(return_value=None)),
-            patch("jusotscope.recon.cli.http_probe", new=AsyncMock(return_value={})),
-            patch("jusotscope.recon.cli.utils.resolve_all_ips", return_value=["1.2.3.4"]),
-            patch("jusotscope.recon.cli.ThreadPoolExecutor") as mock_pool,
-            patch("jusotscope.recon.cli.as_completed") as mock_ac,
+            patch("qost.recon.cli.utils.resolve_ip", return_value="1.2.3.4"),
+            patch("qost.recon.cli.scanner.resolve_all", return_value={}),
+            patch("qost.recon.cli.subdomain.find_subdomains", new=AsyncMock(return_value=[])),
+            patch("qost.recon.cli.portscan.scan", return_value=[]),
+            patch("qost.recon.cli.enrich_asn", new=AsyncMock(return_value=None)),
+            patch("qost.recon.cli.http_probe", new=AsyncMock(return_value={})),
+            patch("qost.recon.cli.utils.resolve_all_ips", return_value=["1.2.3.4"]),
+            patch("qost.recon.cli.ThreadPoolExecutor") as mock_pool,
+            patch("qost.recon.cli.as_completed") as mock_ac,
         ):
             mock_future = MagicMock()
             mock_future.result.return_value = [("example.com", "1.2.3.4")]
@@ -72,14 +72,14 @@ class TestRun:
             resolver=None, verify=False,
         )
         with (
-            patch("jusotscope.recon.cli.utils.get_ptr", return_value="dns.google"),
-            patch("jusotscope.recon.cli.scanner.resolve_all", return_value={}),
-            patch("jusotscope.recon.cli.portscan.scan", return_value=[]),
-            patch("jusotscope.recon.cli.enrich_asn", new=AsyncMock(return_value=None)),
-            patch("jusotscope.recon.cli.http_probe", new=AsyncMock(return_value={})),
-            patch("jusotscope.recon.cli.utils.resolve_all_ips", return_value=[]),
-            patch("jusotscope.recon.cli.ThreadPoolExecutor") as mock_pool,
-            patch("jusotscope.recon.cli.as_completed") as mock_ac,
+            patch("qost.recon.cli.utils.get_ptr", return_value="dns.google"),
+            patch("qost.recon.cli.scanner.resolve_all", return_value={}),
+            patch("qost.recon.cli.portscan.scan", return_value=[]),
+            patch("qost.recon.cli.enrich_asn", new=AsyncMock(return_value=None)),
+            patch("qost.recon.cli.http_probe", new=AsyncMock(return_value={})),
+            patch("qost.recon.cli.utils.resolve_all_ips", return_value=[]),
+            patch("qost.recon.cli.ThreadPoolExecutor") as mock_pool,
+            patch("qost.recon.cli.as_completed") as mock_ac,
         ):
             mock_future = MagicMock()
             mock_future.result.return_value = []

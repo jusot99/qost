@@ -1,7 +1,7 @@
 import asyncio
 import socket
 
-from jusotscope._shared.utils import is_ip, resolve_ip as resolve_host  # noqa: F401
+from qost._shared.utils import is_ip, resolve_ip as resolve_host  # noqa: F401
 
 DEFAULT_PORTS = [
     21, 22, 23, 25, 53, 80, 110, 111, 135, 139,

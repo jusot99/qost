@@ -9,7 +9,7 @@ from pathlib import Path
 
 import httpx
 
-from jusotscope.recon.utils import is_ip, resolve_ip
+from qost.recon.utils import is_ip, resolve_ip
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +142,7 @@ def brute_force(domain: str, wordlist_path: str | None = None) -> list[str]:
             except OSError:
                 logger.debug("Wordlist not found at %s, using fallback", path_hint)
         try:
-            ref = resources.files("jusotscope") / "wordlists" / "subdomains.txt"
+            ref = resources.files("qost") / "wordlists" / "subdomains.txt"
             loaded = [line.strip() for line in ref.read_text().splitlines() if line.strip()]
             if loaded:
                 return loaded

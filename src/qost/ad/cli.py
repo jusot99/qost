@@ -3,9 +3,9 @@ import json
 import time
 from pathlib import Path
 
-from jusotscope._shared.output import console
-from jusotscope.ad.enum import enum_domain, Finding
-from jusotscope.ad.smb import check_null_session
+from qost._shared.output import console
+from qost.ad.enum import enum_domain, Finding
+from qost.ad.smb import check_null_session
 
 
 def run_enum(args: argparse.Namespace):
@@ -58,7 +58,7 @@ def run_enum(args: argparse.Namespace):
         summary.add_row(f"[bold cyan]Duration:[/] [white]{result.duration_seconds}s[/]")
         console.print(RPanel(
             Group(Markdown("### AD Enumeration"), Rule(style="dim"), summary),
-            title="[bold cyan]jusotscope ad enum[/]",
+            title="[bold cyan]qost ad enum[/]",
             border_style="cyan",
             box=box.ROUNDED,
             width=80,

@@ -2,7 +2,7 @@ import argparse
 from unittest.mock import MagicMock, patch
 
 
-from jusotscope.ad import cli
+from qost.ad import cli
 
 
 class TestRegister:
@@ -32,8 +32,8 @@ class TestRunEnum:
         mock_result.null_session = {"status": "secure", "detail": "no access"}
 
         with (
-            patch("jusotscope.ad.cli.enum_domain", return_value=mock_result),
-            patch("jusotscope.ad.cli.check_null_session", return_value={"status": "secure", "detail": "no access"}),
+            patch("qost.ad.cli.enum_domain", return_value=mock_result),
+            patch("qost.ad.cli.check_null_session", return_value={"status": "secure", "detail": "no access"}),
         ):
             ns = argparse.Namespace(
                 target="10.0.0.1", domain="corp.local",
@@ -50,9 +50,9 @@ class TestRunEnum:
         mock_result.root_dse = {}
 
         with (
-            patch("jusotscope.ad.cli.enum_domain", return_value=mock_result),
-            patch("jusotscope.ad.cli.check_null_session", return_value={"status": "secure", "detail": "no access"}),
-            patch("jusotscope.ad.cli.json.dumps") as mock_dumps,
+            patch("qost.ad.cli.enum_domain", return_value=mock_result),
+            patch("qost.ad.cli.check_null_session", return_value={"status": "secure", "detail": "no access"}),
+            patch("qost.ad.cli.json.dumps") as mock_dumps,
         ):
             ns = argparse.Namespace(
                 target="10.0.0.1", domain="corp.local",
