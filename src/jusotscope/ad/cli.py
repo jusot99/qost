@@ -17,8 +17,6 @@ def run_enum(args: argparse.Namespace):
     json_out = args.json_out
     silent = args.silent
     output_path = args.output
-    if output_path and output_path.endswith(".json"):
-        json_out = True
 
     result = enum_domain(target, domain, username, password)
     result.duration_seconds = round(time.time() - start, 1)
@@ -37,7 +35,8 @@ def run_enum(args: argparse.Namespace):
     # Findings severity summary
     severity_counts = {"HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0}
     for f in result.findings:
-        severity_counts[f.severity] = severity_counts.get(f.severity, 0) + 1
+        if f.severity in severity_counts:
+            severity_counts[f.severity] += 1
 
     # Terminal output
     if not silent and not json_out:
@@ -75,11 +74,11 @@ def run_enum(args: argparse.Namespace):
             ft.add_column("Fix")
             colors = {"HIGH": "red", "MEDIUM": "yellow", "LOW": "blue", "INFO": "green"}
             for f in result.findings:
-                c = colors.get(f.severity, "white")
+                color = colors.get(f.severity, "white")
                 ft.add_row(
-                    f"[{c}]{f.severity}[/{c}]",
-                    f"[{c}]{f.type}[/{c}]",
-                    f"[{c}]{f.detail}[/{c}]",
+                    f"[{color}]{f.severity}[/{color}]",
+                    f"[{color}]{f.type}[/{color}]",
+                    f"[{color}]{f.detail}[/{color}]",
                     f"[green]{f.fix}[/green]",
                 )
             console.print(ft)
@@ -103,9 +102,20 @@ def run_enum(args: argparse.Namespace):
             if len(result.spns) > 15:
                 console.print(f"  [dim]... and {len(result.spns) - 15} more[/]")
 
-        # AS-REP
-        if result.asrep_users:
-            console.print(f"\n## AS-REP Roastable [dim]({len(result.asrep_users)})[/]", style="bold red")
+        # Groups
+        if result.groups:
+            console.print(f"\n## Groups [dim]({len(result.groups)})[/]", style="bold white")
+            for g in result.groups[:20]:
+                member_info = f" ({g['member_count']} members)" if g["member_count"] else ""
+                desc = f" — {g['description']}" if g["description"] else ""
+                console.print(f"  [dim]•[/] {g['name']}{desc}{member_info}")
+            if len(result.groups) > 20:
+                console.print(f"  [dim]... and {len(result.groups) - 20} more[/]")
+
+        # AS-REP Roastable
+        asrep_count = len(result.asrep_users)
+        if asrep_count > 0:
+            console.print(f"\n## AS-REP Roastable [dim]({asrep_count})[/]", style="bold red")
             for u in result.asrep_users:
                 status = "[green]enabled[/]" if u["enabled"] else "[red]disabled[/]"
                 console.print(f"  [dim]•[/] {u['name']} ({status})")
@@ -132,7 +142,7 @@ def run_enum(args: argparse.Namespace):
                 console.print(f"  [dim]•[/] {t['name']} → {t['partner']} ({t['direction']})")
 
         # SMB null session
-        console.print(f"\n## SMB Null Session", style="bold white")
+        console.print("\n## SMB Null Session", style="bold white")
         if smb_result.get("vulnerable"):
             console.print(f"  [red]Vulnerable:[/] {smb_result['detail']}")
         else:
@@ -151,12 +161,12 @@ def run_enum(args: argparse.Namespace):
         stats.add_row(f"AS-REP:     [red]{len(result.asrep_users)}[/]")
         stats.add_row(f"Delegation: [yellow]{len(result.unconstrained)}[/]")
         stats.add_row(f"Trusts:     [white]{len(result.trusts)}[/]")
-        stats.add_row(f"Findings:   [red]{len(result.findings)}[/] ({severity_counts.get('HIGH', 0)}H/{severity_counts.get('MEDIUM', 0)}M/{severity_counts.get('LOW', 0)}L)")
+        stats.add_row(f"Findings:   [red]{len(result.findings)}[/] ({severity_counts['HIGH']}H/{severity_counts['MEDIUM']}M/{severity_counts['LOW']}L)")
         console.print(RPanel(stats, border_style="green", box=box.ROUNDED, width=80))
         console.print("\n[bold green]AD Enumeration complete.[/]")
 
     # JSON output
-    if json_out:
+    if json_out or (output_path and output_path.endswith(".json")):
         output = {
             "target": target,
             "domain": result.domain,
@@ -193,10 +203,16 @@ def run_enum(args: argparse.Namespace):
             "duration_seconds": result.duration_seconds,
         }
         json_str = json.dumps(output, indent=2)
-        if output_path and output_path.endswith(".json"):
+
+        if json_out:
+            if output_path and output_path.endswith(".json"):
+                Path(output_path).write_text(json_str)
+            else:
+                print(json_str)
+        elif output_path and output_path.endswith(".json"):
             Path(output_path).write_text(json_str)
-        else:
-            print(json_str)
+            if not silent:
+                console.print(f"\n[green]JSON report written to {output_path}[/]")
 
     # Markdown report
     if output_path and not output_path.endswith(".json"):
@@ -287,7 +303,7 @@ def _write_markdown(result, smb_result, path: str, severity_counts: dict):
         lines.append(f"- **Secure:** {smb_result['detail']}")
     lines.append("")
 
-    lines.append(f"## Summary")
+    lines.append("## Summary")
     lines.append("")
     lines.append(f"- Duration: {result.duration_seconds}s")
     lines.append(f"- Users: {len(result.users)}")
@@ -298,7 +314,7 @@ def _write_markdown(result, smb_result, path: str, severity_counts: dict):
     lines.append(f"- AS-REP Roastable: {len(result.asrep_users)}")
     lines.append(f"- Unconstrained Delegation: {len(result.unconstrained)}")
     lines.append(f"- Domain Trusts: {len(result.trusts)}")
-    lines.append(f"- Findings: {len(result.findings)} ({severity_counts.get('HIGH', 0)}H/{severity_counts.get('MEDIUM', 0)}M/{severity_counts.get('LOW', 0)}L)")
+    lines.append(f"- Findings: {len(result.findings)} ({severity_counts['HIGH']}H/{severity_counts['MEDIUM']}M/{severity_counts['LOW']}L)")
     lines.append("")
 
     Path(path).write_text("\n".join(lines) + "\n")

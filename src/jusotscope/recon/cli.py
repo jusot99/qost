@@ -1,26 +1,32 @@
 import argparse
 import asyncio
 import json
+import logging
 import re
+import socket
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import Any
 
 import httpx
 
 from jusotscope._shared.output import (
     console,
     panel,
-    render_json,
 )
-from jusotscope._shared.resolvers import DEFAULT_RESOLVERS
 from jusotscope.recon import portscan, scanner, security, subdomain, utils
 from jusotscope.recon.utils import is_ip
 
+logger = logging.getLogger(__name__)
+
+
+_DISABLE_VERIFY = True
+
 
 async def http_probe(host: str) -> dict:
-    result = {"url": None, "status": None, "title": None, "server": None}
-    async with httpx.AsyncClient(timeout=5, verify=False, follow_redirects=True) as c:
+    result: dict[str, Any] = {"url": None, "status": None, "title": None, "server": None}
+    async with httpx.AsyncClient(timeout=5, verify=not _DISABLE_VERIFY, follow_redirects=True) as c:
         for scheme in ("https", "http"):
             try:
                 r = await c.get(f"{scheme}://{host}")
@@ -41,7 +47,7 @@ async def http_probe(host: str) -> dict:
 
 
 async def enrich_asn(ip: str) -> dict | None:
-    async with httpx.AsyncClient(timeout=10, verify=False) as c:
+    async with httpx.AsyncClient(timeout=10, verify=not _DISABLE_VERIFY) as c:
         # Try ipinfo.io first as it's very reliable for both v4 and v6
         try:
             r = await c.get(f"https://ipinfo.io/{ip}/json")
@@ -50,10 +56,9 @@ async def enrich_asn(ip: str) -> dict | None:
                 org = data.get("org", "")
                 if org:
                     return {"name": org}
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("IP info lookup failed for %s: %s", ip, exc)
 
-        # Fallback to RDAP (ARIN)
         try:
             r = await c.get(f"https://rdap.arin.net/registry/ip/{ip}")
             if r.status_code == 200:
@@ -67,8 +72,8 @@ async def enrich_asn(ip: str) -> dict | None:
                                 name = vcard[3]
                 if name:
                     return {"name": name}
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("RDAP lookup failed for %s: %s", ip, exc)
     return None
 
 
@@ -83,8 +88,8 @@ async def _run(args: argparse.Namespace):
     silent = args.silent
     json_out = args.json_out
     output_path = args.output
-    if output_path and output_path.endswith(".json"):
-        json_out = True
+    global _DISABLE_VERIFY
+    _DISABLE_VERIFY = not args.verify
 
     start = time.time()
     records_map = {
@@ -128,7 +133,7 @@ async def _run(args: argparse.Namespace):
         summary.add_row(f"[bold cyan]Mode:[/] [green]{scan_mode}")
         panel(
             "jusotscope recon",
-            Group(Markdown("### Ghost DNS Recon v0.1.0"), Rule(style="dim"), summary),
+            Group(Markdown("### Ghost DNS Recon"), Rule(style="dim"), summary),
             border="cyan",
             width=80,
         )
@@ -255,11 +260,11 @@ async def _run(args: argparse.Namespace):
                 BarColumn(),
                 TimeElapsedColumn(),
                 console=console,
-            ) as progress:
+                ) as progress:
                     progress.add_task("Gathering subdomains...", total=None)
-                    subs = await subdomain.find_subdomains(target)
+                    subs = await subdomain.find_subdomains(target, verify=not _DISABLE_VERIFY)
         else:
-            subs = await subdomain.find_subdomains(target)
+            subs = await subdomain.find_subdomains(target, verify=not _DISABLE_VERIFY)
 
         subdomains = subs
 
@@ -306,7 +311,7 @@ async def _run(args: argparse.Namespace):
         try:
             ips = utils.resolve_all_ips(host)
             return [(host, ip) for ip in ips]
-        except Exception:
+        except (socket.gaierror, OSError):
             pass
         return []
 
@@ -326,14 +331,14 @@ async def _run(args: argparse.Namespace):
     hosts_to_probe = live_hosts if json_out else live_hosts[:10]
     
     if not json_out and not silent and len(live_hosts) > 10:
-        console.print(f"  [yellow]Note:[/] Probing only the first 10 hosts for terminal view. Use [bold]--json[/] for full results.\n")
+        console.print("  [yellow]Note:[/] Probing only the first 10 hosts for terminal view. Use [bold]--json[/] for full results.\n")
 
     for host, ip in hosts_to_probe:
         probe = await http_probe(host)
         # Port scan only if limited number of IPs to avoid being blocked/slow
         ports = portscan.scan(ip) if len(resolved_ips) < 20 else []
         
-        detail = {
+        detail: dict[str, Any] = {
             "host": host,
             "ip": ip,
             "http": probe,
@@ -380,7 +385,7 @@ async def _run(args: argparse.Namespace):
         console.print(RPanel(stats, border_style="green", box=box.ROUNDED, width=80))
         console.print("\n[bold green]Reconnaissance complete.[/]")
 
-    if json_out:
+    if json_out or (output_path and output_path.endswith(".json")):
         output = {
             "target": target,
             "type": target_type,
@@ -395,10 +400,16 @@ async def _run(args: argparse.Namespace):
             "duration_seconds": round(elapsed, 1),
         }
         json_str = json.dumps(output, indent=2)
-        if output_path and output_path.endswith(".json"):
+
+        if json_out:
+            if output_path and output_path.endswith(".json"):
+                Path(output_path).write_text(json_str)
+            else:
+                print(json_str)
+        elif output_path and output_path.endswith(".json"):
             Path(output_path).write_text(json_str)
-        else:
-            print(json_str)
+            if not silent:
+                console.print(f"\n[green]JSON report written to {output_path}[/]")
 
     # Markdown report
     if output_path and not output_path.endswith(".json"):
@@ -489,4 +500,5 @@ def register(subparsers):
     p.add_argument("--json", "-j", action="store_true", dest="json_out", help="JSON output")
     p.add_argument("--output", "-o", help="Write report to file (.md or .json)")
     p.add_argument("--silent", "-s", action="store_true", help="Suppress terminal output")
+    p.add_argument("--verify", action="store_true", help="Enable SSL certificate verification (default: disabled)")
     p.set_defaults(func=run)

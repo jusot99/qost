@@ -66,7 +66,7 @@ def check_spf_dmarc(domain: str, txt_records: list[str]) -> list[Vuln]:
     dmarc_found = False
     if dmarc_answers:
         for rdata in dmarc_answers:
-            if "v=DMARC1" in str(rdata).upper():
+            if "v=dmarc1" in str(rdata).lower():
                 dmarc_found = True
                 break
     

@@ -23,7 +23,7 @@ def scan(host: str) -> list[tuple[int, str]]:
             r = s.connect_ex((host, port))
             s.close()
             return (port, svc) if r == 0 else None
-        except Exception:
+        except OSError:
             return None
 
     with ThreadPoolExecutor(max_workers=30) as pool:

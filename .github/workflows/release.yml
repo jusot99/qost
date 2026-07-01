@@ -1,48 +1,27 @@
-name: Build and Release
-
-# Triggered by version bumps in pyproject.toml
+name: Build & Release
 
 on:
   push:
-    branches: [main]
-    paths: [pyproject.toml, .github/workflows/release.yml]
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      exists: ${{ steps.check.outputs.exists }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Read version
-        id: version
-        shell: bash
-        run: echo "version=v$(grep '^version' pyproject.toml | sed 's/.*"\(.*\)"/\1/')" >> $GITHUB_OUTPUT
-
-      - name: Check if release exists
-        id: check
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view "${{ steps.version.outputs.version }}" --repo ${{ github.repository }} &>/dev/null; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
   build:
-    needs: check
-    if: needs.check.outputs.exists == 'false'
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        tool: ["jusotscope"]
+        include:
+          - os: ubuntu-latest
+            target: linux-x86_64
+          - os: macos-latest
+            target: macos-arm64
+          - os: windows-latest
+            target: windows-x86_64
+
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -50,36 +29,21 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
-      - name: Install dependencies
-        run: |
-          pip install pyinstaller httpx dnspython rich ldap3 pycryptodome
+      - uses: astral-sh/setup-uv@v5
 
-      - name: Set binary name
-        id: names
+      - name: Bake version and build
         shell: bash
         run: |
-          OS="${{ runner.os }}"
-          if [ "$OS" = "Windows" ]; then SUFFIX="windows-x86_64.exe"
-          elif [ "$OS" = "macOS" ]; then SUFFIX="darwin-arm64"
-          else SUFFIX="linux-x86_64"
-          fi
-          echo "binary=${{ matrix.tool }}-${SUFFIX}" >> $GITHUB_OUTPUT
-
-      - name: Bake version into binary
-        shell: bash
-        run: |
-          VERSION=$(grep '^version' pyproject.toml | sed 's/.*"\(.*\)"/\1/')
+          VERSION=$(grep '^version' pyproject.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
           cat > src/jusotscope/_version.py << EOF
           __version__ = "${VERSION}"
           EOF
 
-      - name: Build binary
-        shell: bash
-        run: |
-          pyinstaller --onefile \
-            --name ${{ steps.names.outputs.binary }} \
+          uv sync
+          uv run --with pyinstaller pyinstaller --onefile \
+            --name jusotscope \
             --hidden-import dns.asyncresolver \
             --hidden-import dns.asyncquery \
             --hidden-import dns.resolver \
@@ -88,13 +52,39 @@ jobs:
             --hidden-import httpx \
             --hidden-import rich \
             --hidden-import ldap3 \
-            --hidden-import Crypto \
             src/jusotscope/__main__.py
 
-      - name: Upload binary
+          mkdir -p dist/release
+
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cp dist/jusotscope.exe "dist/release/jusotscope-${VERSION}-${{ matrix.target }}.exe"
+            (cd dist/release && 7z a "jusotscope-${VERSION}-${{ matrix.target }}.zip" "jusotscope-${VERSION}-${{ matrix.target }}.exe")
+          else
+            cp dist/jusotscope "dist/release/jusotscope-${VERSION}-${{ matrix.target }}"
+            chmod +x "dist/release/jusotscope-${VERSION}-${{ matrix.target }}"
+            tar -C dist/release -czvf "dist/release/jusotscope-${VERSION}-${{ matrix.target }}.tar.gz" "jusotscope-${VERSION}-${{ matrix.target }}"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jusotscope-${{ matrix.target }}
+          path: |
+            dist/release/*.tar.gz
+            dist/release/*.zip
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.check.outputs.version }}
-          files: dist/${{ steps.names.outputs.binary }}
-          generate_release_notes: ${{ runner.os == 'Linux' }}
-        continue-on-error: true
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          generate_release_notes: true
+          files: release/*

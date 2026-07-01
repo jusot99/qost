@@ -63,14 +63,14 @@ def _safe_list(entry: dict, attr: str) -> list[str]:
 def enum_domain(target: str, domain: str, username: str = "", password: str = "") -> EnumResult:
     result = EnumResult(target=target, domain=domain)
 
-    auth = ANONYMOUS
+    auth: str = ANONYMOUS
     user = None
     if username:
         auth = NTLM
         user = f"{domain}\\{username}"
 
     server = Server(target, get_info=ALL)
-    conn = Connection(server, authentication=auth, user=user, password=password, auto_bind=True)
+    conn = Connection(server, authentication=auth, user=user, password=password, auto_bind=True)  # type: ignore[arg-type]
     result.authenticated = bool(username)
 
     # Root DSE
@@ -85,15 +85,10 @@ def enum_domain(target: str, domain: str, username: str = "", password: str = ""
         nc = (info.raw.get("defaultNamingContext") or [b""])[0]
         if isinstance(nc, bytes):
             nc = nc.decode()
-        config_nc = (info.raw.get("configurationNamingContext") or [b""])[0]
-        if isinstance(config_nc, bytes):
-            config_nc = config_nc.decode()
     else:
         nc = ""
-        config_nc = ""
 
     base = result.root_dse.get("defaultNamingContext", nc) or nc
-    config_base = config_nc
     dns_host = result.root_dse.get("dnsHostName", "")
     result.dc_hostname = dns_host
 
@@ -112,7 +107,20 @@ def enum_domain(target: str, domain: str, username: str = "", password: str = ""
             return False
         return True
 
-    if not _search("(objectClass=user)", ["sAMAccountName", "displayName", "userPrincipalName", "mail", "adminCount", "userAccountControl", "memberOf", "description", "whenCreated", "pwdLastSet", "enabled"]):
+    def _paged_search(filter_str: str, attrs: list[str], page_size: int = 500) -> list:
+        entries = []
+        cookie = True
+        while cookie:
+            conn.search(base, filter_str, attributes=attrs, paged_size=page_size)
+            if conn.result.get("description") in ("operationsError", "insufficientAccessRights"):
+                return []
+            entries.extend(conn.entries)
+            cookie = conn.result.get("controls", {}).get("1.2.840.113556.1.4.319", {}).get("value", {}).get("cookie", b"")
+            if not cookie:
+                break
+        return entries
+
+    if not _search("(objectClass=user)", ["sAMAccountName", "displayName", "userPrincipalName", "mail", "adminCount", "userAccountControl", "memberOf", "description", "whenCreated", "pwdLastSet"]):
         conn.unbind()
         if result.anonymous_restricted:
             result.findings.append(Finding(
@@ -163,13 +171,12 @@ def enum_domain(target: str, domain: str, username: str = "", password: str = ""
                 "name": _safe(entry, "sAMAccountName"),
                 "enabled": enabled,
             })
-    if result.asrep_users:
-        result.findings.append(Finding(
-            type="AS-REP Roastable",
-            severity="HIGH",
-            detail=f"{len(result.asrep_users)} user(s) without Kerberos pre-authentication",
-            fix="Enable 'Account does not require Kerberos pre-authentication' = disabled for affected users",
-        ))
+    result.findings.append(Finding(
+        type="AS-REP Roastable",
+        severity="HIGH" if result.asrep_users else "INFO",
+        detail=f"{len(result.asrep_users)} user(s) without Kerberos pre-authentication",
+        fix="Enable 'Account does not require Kerberos pre-authentication' = disabled for affected users",
+    ))
 
     # Unconstrained delegation
     if _search("(userAccountControl:1.2.840.113556.1.4.803:=524288)", ["sAMAccountName", "dNSHostName", "userAccountControl"]):
@@ -203,27 +210,25 @@ def enum_domain(target: str, domain: str, username: str = "", password: str = ""
             })
 
     # Groups
-    if _search("(objectClass=group)", ["sAMAccountName", "description", "member", "distinguishedName"]):
-        for e in conn.entries:
-            entry = e.entry_attributes_as_dict
-            result.groups.append({
-                "name": _safe(entry, "sAMAccountName"),
-                "description": _safe(entry, "description"),
-                "member_count": len(_safe_list(entry, "member")),
-            })
+    for e in _paged_search("(objectClass=group)", ["sAMAccountName", "description", "member", "distinguishedName"]):
+        entry = e.entry_attributes_as_dict
+        result.groups.append({
+            "name": _safe(entry, "sAMAccountName"),
+            "description": _safe(entry, "description"),
+            "member_count": len(_safe_list(entry, "member")),
+        })
 
     # Domain Trusts
-    if _search("(objectClass=trustedDomain)", ["cn", "trustAttributes", "trustDirection", "trustType", "trustPartner"]):
-        for e in conn.entries:
-            entry = e.entry_attributes_as_dict
-            direction_map = {0: "Disabled", 1: "Inbound", 2: "Outbound", 3: "Bidirectional"}
-            td = int(_safe(entry, "trustDirection") or "3")
-            result.trusts.append({
-                "name": _safe(entry, "cn"),
-                "partner": _safe(entry, "trustPartner"),
-                "direction": direction_map.get(td, str(td)),
-                "type": _safe(entry, "trustType"),
-            })
+    for e in _paged_search("(objectClass=trustedDomain)", ["cn", "trustAttributes", "trustDirection", "trustType", "trustPartner"]):
+        entry = e.entry_attributes_as_dict
+        direction_map = {0: "Disabled", 1: "Inbound", 2: "Outbound", 3: "Bidirectional"}
+        td = int(_safe(entry, "trustDirection") or "3")
+        result.trusts.append({
+            "name": _safe(entry, "cn"),
+            "partner": _safe(entry, "trustPartner"),
+            "direction": direction_map.get(td, str(td)),
+            "type": _safe(entry, "trustType"),
+        })
 
     conn.unbind()
     return result

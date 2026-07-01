@@ -24,8 +24,6 @@ async def _run(args: argparse.Namespace):
     silent = args.silent
     json_out = args.json_out
     output_path = args.output
-    if output_path and output_path.endswith(".json"):
-        json_out = True
     timeout = args.timeout
     concurrency = args.concurrency
 
@@ -65,7 +63,7 @@ async def _run(args: argparse.Namespace):
 
     elapsed = round(time.time() - start, 1)
 
-    if json_out:
+    if json_out or (output_path and output_path.endswith(".json")):
         output = {
             "target": target,
             "ip": ip,
@@ -75,10 +73,16 @@ async def _run(args: argparse.Namespace):
             "duration_seconds": elapsed,
         }
         json_str = json.dumps(output, indent=2)
-        if output_path and output_path.endswith(".json"):
+
+        if json_out:
+            if output_path and output_path.endswith(".json"):
+                Path(output_path).write_text(json_str)
+            else:
+                print(json_str)
+        elif output_path and output_path.endswith(".json"):
             Path(output_path).write_text(json_str)
-        else:
-            print(json_str)
+            if not silent:
+                console.print(f"\n[green]JSON report written to {output_path}[/]")
 
     # Markdown report
     if output_path and not output_path.endswith(".json"):

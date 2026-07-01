@@ -13,8 +13,16 @@ dependencies = [
     "dnspython>=2.6",
     "httpx>=0.26",
     "ldap3>=2.9",
-    "pycryptodome>=3.20",
     "rich>=13",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio",
+    "pytest-cov",
+    "ruff",
+    "mypy",
 ]
 
 [project.scripts]
@@ -22,3 +30,27 @@ jusotscope = "jusotscope.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+jusotscope = ["wordlists/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+markers = [
+    "network: tests that make network calls (skipped by default)",
+]
+
+[tool.coverage.run]
+source = ["jusotscope"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if getattr\\(sys, .frozen., False\\):",
+    "except Exception:",
+    "raise NotImplementedError",
+]

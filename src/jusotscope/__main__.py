@@ -81,12 +81,12 @@ def main():
     from jusotscope.ad import cli as ad_cli
     ad_cli.register(subparsers)
 
-    args = parser.parse_args()
-
     def handler(sig, frame):
         console.print("\n[red]Interrupted. Exiting.[/]")
         sys.exit(1)
     signal.signal(signal.SIGINT, handler)
+
+    args = parser.parse_args()
 
     if hasattr(args, "func"):
         args.func(args)

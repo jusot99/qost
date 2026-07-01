@@ -1,6 +1,8 @@
 import asyncio
 import socket
 
+from jusotscope._shared.utils import is_ip, resolve_ip as resolve_host  # noqa: F401
+
 DEFAULT_PORTS = [
     21, 22, 23, 25, 53, 80, 110, 111, 135, 139,
     143, 161, 179, 389, 443, 445, 465, 514, 587, 593,
@@ -47,9 +49,6 @@ def parse_ports(port_spec: str) -> list[int]:
     return sorted(ports)
 
 
-from jusotscope._shared.utils import is_ip, resolve_ip as resolve_host
-
-
 def service_name(port: int) -> str:
     name = SERVICE_MAP.get(port)
     if name:
@@ -82,12 +81,12 @@ async def check_port(
             text = banner.decode(errors="replace").strip()
             if text:
                 result["banner"] = text[:200]
-        except Exception:
+        except (asyncio.TimeoutError, OSError):
             pass
         writer.close()
         try:
             await writer.wait_closed()
-        except Exception:
+        except (asyncio.TimeoutError, OSError):
             pass
     except (TimeoutError, asyncio.TimeoutError, ConnectionRefusedError,
             ConnectionResetError, OSError):

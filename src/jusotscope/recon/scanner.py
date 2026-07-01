@@ -1,3 +1,5 @@
+from typing import Any
+
 import dns.resolver
 import dns.query
 import dns.zone
@@ -7,7 +9,7 @@ from jusotscope._shared.resolvers import DEFAULT_RESOLVERS
 from jusotscope.recon.utils import is_ip
 
 
-def query_records(domain: str, rtype: str, resolvers: list[str] | None = None):
+def query_records(domain: str, rtype: str, resolvers: list[str] | None = None) -> tuple[Any, str | None]:
     if is_ip(domain):
         if rtype == "A":
             return [domain], None
@@ -29,7 +31,7 @@ def query_records(domain: str, rtype: str, resolvers: list[str] | None = None):
     return None, "All resolvers failed"
 
 
-def resolve_all(target: str, resolvers: list[str] | None = None):
+def resolve_all(target: str, resolvers: list[str] | None = None) -> dict:
     resolvers = resolvers or DEFAULT_RESOLVERS
     results = {}
     types = [
@@ -42,7 +44,7 @@ def resolve_all(target: str, resolvers: list[str] | None = None):
     return results
 
 
-def zone_transfer(ns: str, domain: str):
+def zone_transfer(ns: str, domain: str) -> tuple[list | None, str | None]:
     if is_ip(domain):
         return None, "IP address"
     try:
@@ -67,7 +69,7 @@ def _clean(s: str) -> str:
     return " ".join(s.split())
 
 
-def format_rdata(rdata, rtype: str) -> str:
+def format_rdata(rdata: Any, rtype: str) -> str:
     if rtype == "MX":
         return _clean(f"{rdata.preference} {rdata.exchange}")
     if rtype == "TXT":
