@@ -30,6 +30,9 @@
 </p>
 </div>
 
+> [!CAUTION]
+> This tool is for **authorized security assessments only**. Ensure you have **explicit permission** before targeting any system.
+
 ## Features
 
 | Category | Description |
@@ -44,6 +47,9 @@
 | **Cross-Platform** | Linux, macOS, and Windows binaries |
 
 ## Quick Start
+
+> [!TIP]
+> Grab a **pre-built binary** from the [releases page](https://github.com/jusot99/qost/releases) if you don't want to install Python.
 
 ```bash
 pip install git+https://github.com/jusot99/qost.git
@@ -65,7 +71,8 @@ qost recon example.com --json
 qost recon example.com -o report.md
 ```
 
-> Pre-built binaries are on the [releases page](https://github.com/jusot99/qost/releases).
+> [!NOTE]
+> Results can be exported as **JSON** (`--json`) or **Markdown** (`-o report.md`) for integration with other tools or report generation.
 
 ## Commands
 
@@ -100,8 +107,9 @@ pip install -e .
 
 ## License
 
-MIT — Built and maintained by [Jusot](https://github.com/jusot99).
+MIT
 
 ---
 
-⭐ Star the repo if you find it useful — it helps others discover it too.
+> [!TIP]
+> **Star the repo** if you find it useful ➜ it helps others discover it too.
