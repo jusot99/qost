@@ -112,4 +112,4 @@ MIT
 ---
 
 > [!TIP]
-> **Star the repo** if you find it useful ➜ it helps others discover it too.
+> **Star the repo** ⭐ if you find it useful ➜ it helps others discover it too.
