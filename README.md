@@ -40,8 +40,8 @@
 | **DNS Reconnaissance** | Comprehensive DNS analysis, zone transfer testing, wildcard detection, CT log enumeration |
 | **Subdomain Discovery** | Passive CT log enumeration and active brute-forcing with custom wordlists |
 | **Security Assessment** | SPF/DMARC/DKIM checks, DNSSEC validation, takeover detection across 14 cloud providers |
-| **Port Scanning** | Async TCP scanning with service identification and banner grabbing |
-| **Active Directory Enumeration** | LDAP domain enumeration (users, groups, computers, SPNs, AS-REP, delegation, trusts) + SMB null session detection |
+| **Port Scanning** | Async TCP scanning with service ID, banner grabbing, TLS cert extraction, and HTTP probe |
+| **Active Directory Enumeration** | LDAP enumeration (users, groups, computers, SPNs, trusts, AS-REP, delegation, RBCD, AD CS, LAPS, gMSA) + SMB signing + LDAP channel binding + SMB null session |
 | **Reporting** | Rich terminal output, structured JSON, Markdown reports. Every subcommand supports `--json` and `-o report.md` |
 | **IPv6 Ready** | Full dual-stack support for IPv4 and IPv6 targets |
 | **Cross-Platform** | Linux, macOS, and Windows binaries |
@@ -57,13 +57,19 @@ pip install git+https://github.com/jusot99/qost.git
 # DNS reconnaissance with subdomain brute-forcing
 qost recon example.com --brute
 
-# Port scan a range
+# Multi-target / CIDR / file input
+qost recon 10.0.0.1,10.0.0.2
+qost recon 10.0.0.0/24
+qost recon -f targets.txt
+
+# Port scan with TLS cert extraction and HTTP probe
 qost scan example.com -p 1-1000
+qost scan 10.10.10.1 -p 80,443,8443 --json
 
 # Active Directory enumeration (anonymous)
 qost ad enum 10.10.10.1 -d corp.local
 
-# Active Directory enumeration (authenticated)
+# Active Directory enumeration (authenticated) ➜ full checks
 qost ad enum 10.10.10.1 -d corp.local -u admin -p P@ssw0rd
 
 # Export results as JSON or Markdown
@@ -78,9 +84,9 @@ qost recon example.com -o report.md
 
 | Command | Description |
 |---------|-------------|
-| `recon` | DNS reconnaissance, subdomain enumeration, and security assessment |
-| `scan`  | Asynchronous port scanning with service and banner detection |
-| `ad enum` | Active Directory LDAP enumeration and SMB null session testing |
+| `recon` | DNS reconnaissance (async, 14 record types), subdomain enumeration, security assessment (SPF/DMARC/DKIM/DNSSEC), zone transfer, CT logs |
+| `scan`  | Async port scanning with service ID, banner grab, TLS cert CN/SAN extraction, HTTP probe (Server header) |
+| `ad enum` | LDAP enumeration: users, SPNs, AS-REP, delegation (U/C/RBCD), AD CS (ESC1), LAPS, gMSA, SMB signing, LDAP channel binding, SMB null session |
 
 ## Options
 

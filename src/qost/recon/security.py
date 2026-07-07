@@ -34,7 +34,7 @@ class Vuln:
     fix: str
 
 
-def check_spf_dmarc(domain: str, txt_records: list[str]) -> list[Vuln]:
+async def check_spf_dmarc(domain: str, txt_records: list[str]) -> list[Vuln]:
     vulns: list[Vuln] = []
 
     spf_found = False
@@ -62,7 +62,7 @@ def check_spf_dmarc(domain: str, txt_records: list[str]) -> list[Vuln]:
             "Add SPF: v=spf1 mx ~all",
         ))
 
-    dmarc_answers, _ = query_records(f"_dmarc.{domain}", "TXT")
+    dmarc_answers, _ = await query_records(f"_dmarc.{domain}", "TXT")
     dmarc_found = False
     if dmarc_answers:
         for rdata in dmarc_answers:
@@ -79,7 +79,7 @@ def check_spf_dmarc(domain: str, txt_records: list[str]) -> list[Vuln]:
 
     dkim_found = False
     for sel in DKIM_SELECTORS:
-        answers, _ = query_records(f"{sel}._domainkey.{domain}", "TXT")
+        answers, _ = await query_records(f"{sel}._domainkey.{domain}", "TXT")
         if answers:
             dkim_found = True
             break

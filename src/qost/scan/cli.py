@@ -15,7 +15,14 @@ from qost.scan.scanner import (
 
 
 def run(args: argparse.Namespace):
-    asyncio.run(_run(args))
+    from qost._shared.utils import iter_targets
+    targets_list = iter_targets(args.target, args.file)
+    if not targets_list:
+        console.print("[red]No targets specified[/]")
+        return
+    for t in targets_list:
+        args.target = t
+        asyncio.run(_run(args))
 
 
 async def _run(args: argparse.Namespace):
@@ -69,7 +76,10 @@ async def _run(args: argparse.Namespace):
             "ip": ip,
             "type": target_type,
             "ports_scanned": len(ports),
-            "open_ports": open_ports,
+            "open_ports": [
+                {k: r[k] for k in ("port", "state", "service", "banner", "tls_cert", "http") if r.get(k)}
+                for r in open_ports
+            ],
             "duration_seconds": elapsed,
         }
         json_str = json.dumps(output, indent=2)
@@ -104,15 +114,20 @@ async def _run(args: argparse.Namespace):
             t.add_column("State", style="green", no_wrap=True)
             t.add_column("Service", style="yellow")
             t.add_column("Banner", style="dim")
+            t.add_column("Extra", style="dim")
             for r in open_ports:
                 banner = r.get("banner", "")
-                if len(banner) > 60:
-                    banner = banner[:60] + "..."
+                if len(banner) > 40:
+                    banner = banner[:40] + "..."
+                extra = r.get("http", "") or r.get("tls_cert", "") or ""
+                if len(extra) > 40:
+                    extra = extra[:40] + "..."
                 t.add_row(
                     str(r["port"]),
                     r["state"],
                     r.get("service", ""),
                     banner,
+                    extra,
                 )
             console.print(t)
 
@@ -143,13 +158,16 @@ def _write_scan_markdown(target: str, ip: str, target_type: str, display_target:
     if open_ports:
         lines.append("## Open Ports")
         lines.append("")
-        lines.append("| Port | Service | Banner |")
-        lines.append("|---|---|---|")
+        lines.append("| Port | Service | Banner | Probe |")
+        lines.append("|---|---|---|---|")
         for r in open_ports:
             banner = r.get("banner", "")
-            if len(banner) > 80:
-                banner = banner[:80] + "..."
-            lines.append(f"| {r['port']} | {r.get('service', '')} | {banner} |")
+            if len(banner) > 60:
+                banner = banner[:60] + "..."
+            extra = r.get("http", "") or r.get("tls_cert", "") or ""
+            if len(extra) > 60:
+                extra = extra[:60] + "..."
+            lines.append(f"| {r['port']} | {r.get('service', '')} | {banner} | {extra} |")
         lines.append("")
     else:
         lines.append("## Results")
@@ -167,7 +185,8 @@ def _write_scan_markdown(target: str, ip: str, target_type: str, display_target:
 
 def register(subparsers):
     p = subparsers.add_parser("scan", help="Port scanning and service detection")
-    p.add_argument("target", help="Domain or IP address")
+    p.add_argument("target", nargs="?", help="Domain or IP address (optional if --file is used)")
+    p.add_argument("--file", "-f", help="File containing targets (one per line, supports CIDR)")
     p.add_argument(
         "-p", "--ports",
         help="Ports to scan (e.g. '22,80,443' or '1-1000'). Default: top 50 ports",

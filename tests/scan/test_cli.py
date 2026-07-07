@@ -30,7 +30,7 @@ class TestRun:
         mock_ns = argparse.Namespace(
             target="example.com", ports=None,
             silent=False, json_out=False, output=None,
-            timeout=3.0, concurrency=50,
+            timeout=3.0, concurrency=50, file=None,
         )
         with patch("qost.scan.cli.asyncio.run") as mock_arun:
             mock_arun.side_effect = lambda coro: coro.close()

@@ -30,7 +30,7 @@ class TestRun:
         mock_ns = argparse.Namespace(
             target="example.com", brute=False, wordlist=None,
             silent=False, json_out=False, output=None,
-            resolver=None, verify=False,
+            resolver=None, verify=False, file=None,
         )
         with patch("qost.recon.cli.asyncio.run") as mock_arun:
             mock_arun.side_effect = lambda coro: coro.close()
@@ -43,11 +43,12 @@ class TestRun:
         mock_ns = argparse.Namespace(
             target="example.com", brute=False, wordlist=None,
             silent=True, json_out=False, output=None,
-            resolver=None, verify=False,
+            resolver=None, verify=False, file=None,
         )
         with (
             patch("qost.recon.cli.utils.resolve_ip", return_value="1.2.3.4"),
-            patch("qost.recon.cli.scanner.resolve_all", return_value={}),
+            patch("qost.recon.cli.scanner.resolve_all", new=AsyncMock(return_value={})),
+            patch("qost.recon.cli.security.check_spf_dmarc", new=AsyncMock(return_value=[])),
             patch("qost.recon.cli.subdomain.find_subdomains", new=AsyncMock(return_value=[])),
             patch("qost.recon.cli.portscan.scan", return_value=[]),
             patch("qost.recon.cli.enrich_asn", new=AsyncMock(return_value=None)),
@@ -69,7 +70,7 @@ class TestRun:
         mock_ns = argparse.Namespace(
             target="8.8.8.8", brute=False, wordlist=None,
             silent=True, json_out=False, output=None,
-            resolver=None, verify=False,
+            resolver=None, verify=False, file=None,
         )
         with (
             patch("qost.recon.cli.utils.get_ptr", return_value="dns.google"),

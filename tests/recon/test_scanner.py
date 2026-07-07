@@ -1,5 +1,6 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 
 from qost.recon.scanner import query_records, resolve_all, zone_transfer, format_rdata, _clean
 
@@ -70,8 +71,16 @@ class TestFormatRdata:
         assert "raw data" in result
 
 
+@pytest.mark.asyncio
 class TestQueryRecords:
-    def test_successful_query(self):
+    async def _run(self, domain, rtype, resolvers=None):
+        """Run query_records with to_thread mocked to run synchronously."""
+        async def _sync_to_thread(fn, *args):
+            return fn(*args)
+        with patch("qost.recon.scanner.asyncio.to_thread", new=_sync_to_thread):
+            return await query_records(domain, rtype, resolvers)
+
+    async def test_successful_query(self):
         mock_answer = MagicMock()
         mock_answer.rrset = [MagicMock()]
         mock_answer.rrset[0].to_text.return_value = "8.8.8.8"
@@ -80,10 +89,10 @@ class TestQueryRecords:
         mock_resolver.resolve.return_value = mock_answer
 
         with patch("dns.resolver.Resolver", return_value=mock_resolver):
-            answers, error = query_records("example.com", "A")
+            answers, error = await self._run("example.com", "A")
             assert error is None
 
-    def test_no_answer_triggers_fallback(self):
+    async def test_no_answer_triggers_fallback(self):
         """NoAnswer is caught and resolver falls through to next."""
         import dns.resolver
         mock_resolver = MagicMock()
@@ -93,11 +102,10 @@ class TestQueryRecords:
             patch("dns.resolver.Resolver", return_value=mock_resolver),
             patch("qost.recon.scanner.DEFAULT_RESOLVERS", ["1.1.1.1"]),
         ):
-            answers, error = query_records("example.com", "A")
-            # Since resolvers list is ["1.1.1.1"] and it raises, we get fallback msg
+            answers, error = await self._run("example.com", "A")
             assert error == "All resolvers failed"
 
-    def test_nxdomain_triggers_fallback(self):
+    async def test_nxdomain_triggers_fallback(self):
         import dns.resolver
         mock_resolver = MagicMock()
         mock_resolver.resolve.side_effect = dns.resolver.NXDOMAIN
@@ -106,10 +114,10 @@ class TestQueryRecords:
             patch("dns.resolver.Resolver", return_value=mock_resolver),
             patch("qost.recon.scanner.DEFAULT_RESOLVERS", ["1.1.1.1"]),
         ):
-            answers, error = query_records("nonexistent.invalid", "A")
+            answers, error = await self._run("nonexistent.invalid", "A")
             assert error == "All resolvers failed"
 
-    def test_custom_resolvers(self):
+    async def test_custom_resolvers(self):
         mock_answer = MagicMock()
         mock_answer.rrset = [MagicMock()]
         mock_answer.rrset[0].to_text.return_value = "1.1.1.1"
@@ -118,33 +126,32 @@ class TestQueryRecords:
         mock_resolver.resolve.return_value = mock_answer
 
         with patch("dns.resolver.Resolver", return_value=mock_resolver):
-            answers, error = query_records("example.com", "A", resolvers=["1.1.1.1"])
+            answers, error = await self._run("example.com", "A", resolvers=["1.1.1.1"])
             assert error is None
 
-    def test_is_ip_returns_directly(self):
-        answers, error = query_records("8.8.8.8", "A")
+    async def test_is_ip_returns_directly(self):
+        answers, error = await self._run("8.8.8.8", "A")
         assert answers == ["8.8.8.8"]
         assert error is None
 
-    def test_is_ip_other_type(self):
-        answers, error = query_records("8.8.8.8", "MX")
+    async def test_is_ip_other_type(self):
+        answers, error = await self._run("8.8.8.8", "MX")
         assert answers is None
         assert "IP address" in error
 
 
+@pytest.mark.asyncio
 class TestResolveAll:
-    def test_resolves_all_types(self):
-        with patch("qost.recon.scanner.query_records") as mock_query:
-            mock_query.return_value = (["data"], None)
-            result = resolve_all("example.com")
+    async def test_resolves_all_types(self):
+        with patch("qost.recon.scanner.query_records", new=AsyncMock(return_value=(["data"], None))):
+            result = await resolve_all("example.com")
             assert "A" in result
             assert "MX" in result
             assert "NS" in result
 
-    def test_is_ip_only_a(self):
-        with patch("qost.recon.scanner.query_records") as mock_query:
-            mock_query.return_value = (["1.2.3.4"], None)
-            result = resolve_all("8.8.8.8")
+    async def test_is_ip_only_a(self):
+        with patch("qost.recon.scanner.query_records", new=AsyncMock(return_value=(["1.2.3.4"], None))):
+            result = await resolve_all("8.8.8.8")
             assert "A" in result
 
 

@@ -50,7 +50,7 @@ class TestRenderJSON:
         result = render_json([1, 2, 3])
         assert "1" in result
 
-    def test_render_dataclass(self):
+    def test_render_dataclass(self) -> None:
         from dataclasses import dataclass
         @dataclass
         class Foo:

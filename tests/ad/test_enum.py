@@ -249,6 +249,119 @@ class TestEnumDomain:
             assert result.trusts[0]["partner"] == "other.local"
             assert result.trusts[0]["direction"] == "Bidirectional"
 
+    def test_enum_constrained_delegation(self):
+        entry = MagicMock()
+        entry.entry_attributes_as_dict = {
+            "sAMAccountName": [b"svc_account"],
+            "dNSHostName": [b"svc.corp.local"],
+            "msDS-AllowedToDelegateTo": [b"HTTP/websrv.corp.local", b"CIFS/filesrv.corp.local"],
+            "userAccountControl": [b"66048"],
+        }
+        conn = self._mock_conn([entry])
+        with (
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
+        ):
+            result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
+            assert len(result.constrained) == 1
+            assert len(result.constrained[0]["allowed_to_delegate"]) == 2
+            assert any(f.type == "Constrained Delegation" for f in result.findings)
+
+    def test_enum_rbcd(self):
+        entry = MagicMock()
+        entry.entry_attributes_as_dict = {
+            "sAMAccountName": [b"WS001$"],
+            "dNSHostName": [b"ws001.corp.local"],
+            "msDS-AllowedToActOnBehalfOfOtherIdentity": [b"some_acl_value"],
+            "userAccountControl": [b"4096"],
+        }
+        conn = self._mock_conn([entry])
+        with (
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
+        ):
+            result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
+            assert len(result.rbcd) == 1
+            assert any(f.type.startswith("Resource-Based") for f in result.findings)
+
+    def test_enum_adcs_server(self):
+        entry = MagicMock()
+        entry.entry_attributes_as_dict = {
+            "cn": [b"CA01"],
+            "dNSHostName": [b"ca01.corp.local"],
+            "description": [b"Enterprise CA"],
+        }
+        conn = self._mock_conn([entry])
+        with (
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
+        ):
+            result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
+            assert len(result.adcs_servers) == 1
+            assert result.adcs_servers[0]["name"] == "CA01"
+            assert any(f.type == "AD CS Server Detected" for f in result.findings)
+
+    def test_enum_adcs_template_esc1(self):
+        entry = MagicMock()
+        entry.entry_attributes_as_dict = {
+            "cn": [b"VulnTemplate"],
+            "displayName": [b"Vulnerable Template"],
+            "msPKI-Certificate-Name-Flag": [b"1"],
+            "msPKI-Template-Schema-Version": [b"2"],
+        }
+        conn = self._mock_conn([entry])
+        with (
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
+        ):
+            result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
+            assert len(result.adcs_templates) == 1
+            assert result.adcs_templates[0]["enrollee_supplies_subject"] is True
+            assert any("ESC1" in f.type for f in result.findings)
+
+    def test_enum_laps(self):
+        entry = MagicMock()
+        entry.entry_attributes_as_dict = {
+            "sAMAccountName": [b"WS001$"],
+            "dNSHostName": [b"ws001.corp.local"],
+            "ms-Mcs-AdmPwd": [b"P@ssw0rd123"],
+        }
+        conn = self._mock_conn([entry])
+        with (
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
+        ):
+            result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
+            assert len(result.laps_computers) == 1
+            assert result.laps_computers[0]["name"] == "WS001$"
+            assert any(f.type == "LAPS Password Readable" for f in result.findings)
+
+    def test_enum_gmsa(self):
+        entry = MagicMock()
+        entry.entry_attributes_as_dict = {
+            "sAMAccountName": [b"gmsa_svc$"],
+            "dNSHostName": [b"gmsa-svc.corp.local"],
+            "msDS-ManagedPasswordId": [b"some_id"],
+        }
+        conn = self._mock_conn([entry])
+        with (
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
+        ):
+            result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
+            assert len(result.gmsa_accounts) == 1
+            assert result.gmsa_accounts[0]["name"] == "gmsa_svc$"
+            assert any(f.type == "gMSA Accounts Detected" for f in result.findings)
+
+    def test_enum_smb_signing(self):
+        conn = self._mock_conn([])
+        with (
+            patch("qost.ad.enum.Server", return_value=FakeServer("10.0.0.1")),
+            patch("qost.ad.enum.Connection", return_value=conn),
+        ):
+            result = enum_domain("10.0.0.1", "corp.local", "admin", "P@ssw0rd")
+            assert isinstance(result.smb_signing, str)
+
     def test_asrep_zero_still_adds_finding(self):
         conn = self._mock_conn([])
         with (

@@ -15,8 +15,8 @@ from qost._shared.output import (
     console,
     panel,
 )
+from qost._shared.utils import is_ip, iter_targets
 from qost.recon import portscan, scanner, security, subdomain, utils
-from qost.recon.utils import is_ip
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,13 @@ async def enrich_asn(ip: str) -> dict | None:
 
 
 def run(args: argparse.Namespace):
-    asyncio.run(_run(args))
+    targets_list = iter_targets(args.target, args.file)
+    if not targets_list:
+        console.print("[red]No targets specified[/]")
+        return
+    for t in targets_list:
+        args.target = t
+        asyncio.run(_run(args))
 
 
 async def _run(args: argparse.Namespace):
@@ -142,7 +148,7 @@ async def _run(args: argparse.Namespace):
     if not silent and not json_out:
         console.print("## Phase 1: DNS Records", style="bold magenta")
 
-    results = scanner.resolve_all(target, args.resolver or None)
+    results = await scanner.resolve_all(target, args.resolver or None)
 
     for rtype, attr in records_map.items():
         answers, err = results.get(rtype, (None, None))
@@ -186,7 +192,7 @@ async def _run(args: argparse.Namespace):
             console.print("  [yellow]Skipped for IP addresses[/]")
     else:
         txt_records = [str(r) for r in all_records.get("TXT", [])]
-        vulnerabilities += security.check_spf_dmarc(target, txt_records)
+        vulnerabilities += await security.check_spf_dmarc(target, txt_records)
         vulnerabilities += security.check_dnssec(
             all_records.get("DNSKEY", []), all_records.get("DS", [])
         )
@@ -493,7 +499,8 @@ def _write_recon_markdown(output_path: str, target: str, target_type: str, displ
 
 def register(subparsers):
     p = subparsers.add_parser("recon", help="DNS reconnaissance and subdomain enumeration")
-    p.add_argument("target", help="Domain or IP address")
+    p.add_argument("target", nargs="?", help="Domain or IP address (optional if --file is used)")
+    p.add_argument("--file", "-f", help="File containing targets (one per line, supports CIDR)")
     p.add_argument("--brute", "-b", action="store_true", help="Enable subdomain bruteforce")
     p.add_argument("--wordlist", "-w", help="Path to wordlist file")
     p.add_argument("--resolver", "-r", action="append", help="Custom DNS resolver")

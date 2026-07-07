@@ -1,47 +1,49 @@
+import asyncio
 from typing import Any
 
-import dns.resolver
 import dns.query
-import dns.zone
 import dns.rdatatype
+import dns.resolver
+import dns.zone
 
 from qost._shared.resolvers import DEFAULT_RESOLVERS
 from qost.recon.utils import is_ip
 
 
-def query_records(domain: str, rtype: str, resolvers: list[str] | None = None) -> tuple[Any, str | None]:
+async def query_records(domain: str, rtype: str, resolvers: list[str] | None = None) -> tuple[Any, str | None]:
     if is_ip(domain):
         if rtype == "A":
             return [domain], None
         return None, "IP address - no DNS records"
 
     resolvers = resolvers or DEFAULT_RESOLVERS
-    res = dns.resolver.Resolver()
-    res.timeout = 4
-    res.lifetime = 8
-    
-    for rip in resolvers:
-        try:
-            res.nameservers = [rip]
-            answers = res.resolve(domain, rtype, raise_on_no_answer=False)
-            if answers.rrset is not None:
-                return answers, None
-        except Exception:
-            continue
-    return None, "All resolvers failed"
+
+    def _query() -> tuple[Any, str | None]:
+        res = dns.resolver.Resolver()
+        res.timeout = 4
+        res.lifetime = 8
+        for rip in resolvers:
+            try:
+                res.nameservers = [rip]
+                answers = res.resolve(domain, rtype, raise_on_no_answer=False)
+                if answers.rrset is not None:
+                    return answers, None
+            except Exception:
+                continue
+        return None, "All resolvers failed"
+
+    return await asyncio.to_thread(_query)
 
 
-def resolve_all(target: str, resolvers: list[str] | None = None) -> dict:
+async def resolve_all(target: str, resolvers: list[str] | None = None) -> dict:
     resolvers = resolvers or DEFAULT_RESOLVERS
-    results = {}
     types = [
         "A", "AAAA", "MX", "NS", "TXT", "CNAME", "SOA",
         "SRV", "CAA", "SSHFP", "TLSA", "NAPTR", "DNSKEY", "DS",
     ]
-    for rtype in types:
-        answers, err = query_records(target, rtype, resolvers)
-        results[rtype] = (answers, err)
-    return results
+    tasks = [query_records(target, rtype, resolvers) for rtype in types]
+    results_list = await asyncio.gather(*tasks)
+    return {rtype: results_list[i] for i, rtype in enumerate(types)}
 
 
 def zone_transfer(ns: str, domain: str) -> tuple[list | None, str | None]:

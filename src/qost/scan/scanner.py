@@ -1,5 +1,6 @@
 import asyncio
 import socket
+import ssl
 
 from qost._shared.utils import is_ip, resolve_ip as resolve_host  # noqa: F401
 
@@ -11,7 +12,50 @@ DEFAULT_PORTS = [
     5900, 6379, 8080, 8081, 8443, 8888, 9092, 9200, 27017, 27018,
 ]
 
+TLS_PORTS = {443, 465, 636, 993, 995, 2083, 2376, 3389, 8443}
+HTTP_PORTS = {80, 443, 8080, 8081, 8443, 8888}
+
 BANNER_SIZE = 2048
+
+
+def _try_tls_banner(host: str, port: int, timeout: float = 3.0) -> str:
+    """Attempt TLS handshake and extract cert CN/SANs as a banner hint."""
+    try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with socket.create_connection((host, port), timeout=timeout) as sock:
+            with ctx.wrap_socket(sock, server_hostname=host) as tls:
+                cert = tls.getpeercert()
+                if cert:
+                    parts: list[str] = []
+                    for rdn in cert.get("subject", ()):
+                        for pair in rdn:
+                            if len(pair) == 2 and pair[0] == "commonName":
+                                parts.append(str(pair[1]))
+                    for san in cert.get("subjectAltName", ()):
+                        if len(san) == 2:
+                            parts.append(str(san[1]))
+                    return "TLS: " + ", ".join(parts[:6])
+    except Exception:
+        pass
+    return ""
+
+
+def _try_http_banner(host: str, port: int, timeout: float = 3.0) -> str:
+    """Send HTTP GET request and return status + server header."""
+    try:
+        scheme = "https" if port in TLS_PORTS else "http"
+        import httpx
+        with httpx.Client(timeout=timeout, verify=False) as c:
+            r = c.get(f"{scheme}://{host}:{port}", headers={"User-Agent": "Mozilla/5.0"})
+            lines = [f"HTTP {r.status_code}"]
+            server = r.headers.get("server", "")
+            if server:
+                lines.append(server)
+            return " | ".join(lines)
+    except Exception:
+        return ""
 
 SERVICE_MAP: dict[int, str] = {
     21: "FTP", 22: "SSH", 23: "Telnet", 25: "SMTP", 53: "DNS",
@@ -67,6 +111,8 @@ async def check_port(
         "state": "closed",
         "service": service_name(port),
         "banner": "",
+        "tls_cert": "",
+        "http": "",
     }
     try:
         _, writer = await asyncio.wait_for(
@@ -91,6 +137,18 @@ async def check_port(
     except (TimeoutError, asyncio.TimeoutError, ConnectionRefusedError,
             ConnectionResetError, OSError):
         pass
+
+    # Active probing for TLS and HTTP ports
+    if result["state"] == "open":
+        if port in TLS_PORTS:
+            tls_info = await asyncio.to_thread(_try_tls_banner, host, port, timeout)
+            if tls_info:
+                result["tls_cert"] = tls_info
+        if port in HTTP_PORTS or (result.get("banner", "").startswith("HTTP")):
+            http_info = await asyncio.to_thread(_try_http_banner, host, port, timeout)
+            if http_info:
+                result["http"] = http_info
+
     return result
 
 

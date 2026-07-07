@@ -1,7 +1,13 @@
 from unittest.mock import patch
 
 
-from qost._shared.utils import is_ip, resolve_ip, resolve_all_ips
+from qost._shared.utils import (
+    expand_targets,
+    is_ip,
+    iter_targets,
+    resolve_all_ips,
+    resolve_ip,
+)
 
 
 class TestIsIP:
@@ -86,3 +92,49 @@ class TestResolveAllIPs:
             result = resolve_all_ips("dual.example.com")
             assert "1.1.1.1" in result
             assert "2001:db8::1" in result
+
+
+class TestExpandTargets:
+    def test_single_target(self):
+        assert expand_targets(["example.com"]) == ["example.com"]
+
+    def test_comma_separated(self):
+        assert expand_targets(["a.com,b.com"]) == ["a.com", "b.com"]
+
+    def test_cidr_small(self):
+        hosts = expand_targets(["127.0.0.0/30"])
+        assert "127.0.0.1" in hosts
+        assert "127.0.0.2" in hosts
+        assert len(hosts) == 2
+
+    def test_cidr_invalid(self):
+        assert expand_targets(["not-a-cidr/33"]) == []
+
+    def test_empty_skipped(self):
+        assert expand_targets(["", "a.com"]) == ["a.com"]
+
+    def test_mixed(self):
+        result = expand_targets(["example.com", "10.0.0.0/31,test.local"])
+        assert "example.com" in result
+        assert "test.local" in result
+
+
+class TestIterTargets:
+    def test_no_target_no_file(self):
+        assert iter_targets(None) == []
+
+    def test_from_file(self, tmp_path):
+        f = tmp_path / "targets.txt"
+        f.write_text("example.com\n# comment\ntest.local\n")
+        result = iter_targets(None, str(f))
+        assert "example.com" in result
+        assert "test.local" in result
+
+    def test_file_overrides_positional(self):
+        assert iter_targets("ignored.com", "/nonexistent/file") == ["ignored.com"]
+
+    def test_string_target(self):
+        assert iter_targets("single.com") == ["single.com"]
+
+    def test_list_target(self):
+        assert iter_targets(["a.com", "b.com"]) == ["a.com", "b.com"]

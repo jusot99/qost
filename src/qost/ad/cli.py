@@ -126,6 +126,20 @@ def run_enum(args: argparse.Namespace):
             for u in result.unconstrained:
                 console.print(f"  [dim]•[/] {u['name']} ({u['dns_hostname']})")
 
+        # Constrained delegation
+        if result.constrained:
+            console.print(f"\n## Constrained Delegation [dim]({len(result.constrained)})[/]", style="bold yellow")
+            for c in result.constrained:
+                services = ", ".join(c['allowed_to_delegate'][:3])
+                extra = "..." if len(c['allowed_to_delegate']) > 3 else ""
+                console.print(f"  [dim]•[/] {c['name']} → {services}{extra}")
+
+        # RBCD
+        if result.rbcd:
+            console.print(f"\n## RBCD [dim]({len(result.rbcd)})[/]", style="bold red")
+            for r in result.rbcd:
+                console.print(f"  [dim]•[/] {r['name']} ({r['dns_hostname']})")
+
         # Computers
         if result.computers:
             console.print(f"\n## Computers [dim]({len(result.computers)})[/]", style="bold white")
@@ -140,6 +154,39 @@ def run_enum(args: argparse.Namespace):
             console.print(f"\n## Domain Trusts [dim]({len(result.trusts)})[/]", style="bold white")
             for t in result.trusts:
                 console.print(f"  [dim]•[/] {t['name']} → {t['partner']} ({t['direction']})")
+
+        # AD CS
+        if result.adcs_servers:
+            console.print(f"\n## AD CS Servers [dim]({len(result.adcs_servers)})[/]", style="bold red")
+            for s in result.adcs_servers:
+                console.print(f"  [dim]•[/] {s['name']} ({s['dns_hostname']})")
+
+        if result.adcs_templates:
+            console.print(f"\n## Certificate Templates [dim]({len(result.adcs_templates)})[/]", style="bold yellow")
+            for t in result.adcs_templates:
+                esc1 = " [red]ESC1[/]" if t["enrollee_supplies_subject"] else ""
+                console.print(f"  [dim]•[/] {t['name']}{esc1}")
+
+        # LAPS
+        if result.laps_computers:
+            console.print(f"\n## LAPS Password Readable [dim]({len(result.laps_computers)})[/]", style="bold red")
+            for c in result.laps_computers[:10]:
+                console.print(f"  [dim]•[/] {c['name']}")
+            if len(result.laps_computers) > 10:
+                console.print(f"  [dim]... and {len(result.laps_computers) - 10} more[/]")
+
+        # gMSA
+        if result.gmsa_accounts:
+            console.print(f"\n## gMSA Accounts [dim]({len(result.gmsa_accounts)})[/]", style="bold white")
+            for g in result.gmsa_accounts:
+                console.print(f"  [dim]•[/] {g['name']}")
+
+        # SMB signing & LDAP channel binding
+        console.print("\n## Security Configurations", style="bold white")
+        signing_color = "red" if result.smb_signing == "Not Required" else "green"
+        console.print(f"  SMB Signing: [{signing_color}]{result.smb_signing}[/]")
+        binding_color = "red" if result.ldap_channel_binding == "Unknown" else "green"
+        console.print(f"  LDAP Channel Binding: [{binding_color}]{result.ldap_channel_binding}[/]")
 
         # SMB null session
         console.print("\n## SMB Null Session", style="bold white")
@@ -159,7 +206,9 @@ def run_enum(args: argparse.Namespace):
         stats.add_row(f"Groups:     [white]{len(result.groups)}[/]")
         stats.add_row(f"SPNs:       [white]{len(result.spns)}[/]")
         stats.add_row(f"AS-REP:     [red]{len(result.asrep_users)}[/]")
-        stats.add_row(f"Delegation: [yellow]{len(result.unconstrained)}[/]")
+        stats.add_row(f"Delegation: [yellow]U:{len(result.unconstrained)} C:{len(result.constrained)} R:{len(result.rbcd)}[/]")
+        stats.add_row(f"AD CS:      [red]{'Yes' if result.adcs_servers else 'No'}[/]")
+        stats.add_row(f"LAPS/gMSA:  [yellow]{len(result.laps_computers)}/{len(result.gmsa_accounts)}[/]")
         stats.add_row(f"Trusts:     [white]{len(result.trusts)}[/]")
         stats.add_row(f"Findings:   [red]{len(result.findings)}[/] ({severity_counts['HIGH']}H/{severity_counts['MEDIUM']}M/{severity_counts['LOW']}L)")
         console.print(RPanel(stats, border_style="green", box=box.ROUNDED, width=80))
@@ -181,8 +230,17 @@ def run_enum(args: argparse.Namespace):
                 "spns": len(result.spns),
                 "asrep_roastable": len(result.asrep_users),
                 "unconstrained_delegation": len(result.unconstrained),
+                "constrained_delegation": len(result.constrained),
+                "rbcd": len(result.rbcd),
+                "adcs_servers": len(result.adcs_servers),
+                "laps_readable": len(result.laps_computers),
+                "gmsa_accounts": len(result.gmsa_accounts),
                 "trusts": len(result.trusts),
                 "findings": len(result.findings),
+            },
+            "security": {
+                "smb_signing": result.smb_signing,
+                "ldap_channel_binding": result.ldap_channel_binding,
             },
             "checks": {
                 "ldap_root_dse": {"status": "success", "data": result.root_dse},
@@ -193,6 +251,14 @@ def run_enum(args: argparse.Namespace):
                 "spns": {"status": "success", "count": len(result.spns), "data": result.spns},
                 "asrep_roastable": {"status": "success", "count": len(result.asrep_users), "data": result.asrep_users},
                 "delegation_unconstrained": {"status": "warning" if result.unconstrained else "success", "count": len(result.unconstrained), "data": result.unconstrained},
+                "delegation_constrained": {"status": "warning" if result.constrained else "success", "count": len(result.constrained), "data": result.constrained},
+                "delegation_rbcd": {"status": "warning" if result.rbcd else "success", "count": len(result.rbcd), "data": result.rbcd},
+                "adcs_servers": {"status": "warning" if result.adcs_servers else "success", "count": len(result.adcs_servers), "data": result.adcs_servers},
+                "adcs_templates": {"status": "warning" if result.adcs_templates else "success", "count": len(result.adcs_templates), "data": result.adcs_templates},
+                "laps_readable": {"status": "warning" if result.laps_computers else "success", "count": len(result.laps_computers), "data": result.laps_computers},
+                "gmsa_accounts": {"status": "info" if result.gmsa_accounts else "success", "count": len(result.gmsa_accounts), "data": result.gmsa_accounts},
+                "smb_signing": {"status": "warning" if result.smb_signing == "Not Required" else "success", "value": result.smb_signing},
+                "ldap_channel_binding": {"status": "warning" if result.ldap_channel_binding == "Unknown" else "success", "value": result.ldap_channel_binding},
                 "domain_trusts": {"status": "success", "count": len(result.trusts), "data": result.trusts},
                 "null_session": {"status": "vulnerable" if smb_result.get("vulnerable") else smb_result.get("status", "error"), "detail": smb_result.get("detail", "")},
             },
@@ -278,6 +344,55 @@ def _write_markdown(result, smb_result, path: str, severity_counts: dict):
             lines.append(f"- {u['name']} ({u['dns_hostname']})")
         lines.append("")
 
+    if result.constrained:
+        lines.append("## Constrained Delegation")
+        lines.append("")
+        for c in result.constrained:
+            services = ", ".join(c['allowed_to_delegate'][:3])
+            lines.append(f"- {c['name']} → {services}")
+        lines.append("")
+
+    if result.rbcd:
+        lines.append("## Resource-Based Constrained Delegation (RBCD)")
+        lines.append("")
+        for r in result.rbcd:
+            lines.append(f"- {r['name']} ({r['dns_hostname']})")
+        lines.append("")
+
+    if result.adcs_servers:
+        lines.append("## AD CS Servers")
+        lines.append("")
+        for s in result.adcs_servers:
+            lines.append(f"- {s['name']} ({s['dns_hostname']})")
+        lines.append("")
+
+    if result.adcs_templates:
+        lines.append("## Certificate Templates")
+        lines.append("")
+        for t in result.adcs_templates:
+            esc1 = " [ESC1]" if t["enrollee_supplies_subject"] else ""
+            lines.append(f"- {t['name']}{esc1}")
+        lines.append("")
+
+    if result.laps_computers:
+        lines.append("## LAPS Password Readable")
+        lines.append("")
+        for c in result.laps_computers:
+            lines.append(f"- {c['name']}")
+        lines.append("")
+
+    if result.gmsa_accounts:
+        lines.append("## gMSA Accounts")
+        lines.append("")
+        for g in result.gmsa_accounts:
+            lines.append(f"- {g['name']}")
+        lines.append("")
+
+    if result.smb_signing:
+        lines.append(f"- SMB Signing: {result.smb_signing}")
+    if result.ldap_channel_binding:
+        lines.append(f"- LDAP Channel Binding: {result.ldap_channel_binding}")
+
     if result.computers:
         lines.append(f"## Computers ({len(result.computers)})")
         lines.append("")
@@ -313,6 +428,13 @@ def _write_markdown(result, smb_result, path: str, severity_counts: dict):
     lines.append(f"- SPNs: {len(result.spns)}")
     lines.append(f"- AS-REP Roastable: {len(result.asrep_users)}")
     lines.append(f"- Unconstrained Delegation: {len(result.unconstrained)}")
+    lines.append(f"- Constrained Delegation: {len(result.constrained)}")
+    lines.append(f"- RBCD: {len(result.rbcd)}")
+    lines.append(f"- AD CS Servers: {len(result.adcs_servers)}")
+    lines.append(f"- LAPS Readable: {len(result.laps_computers)}")
+    lines.append(f"- gMSA Accounts: {len(result.gmsa_accounts)}")
+    lines.append(f"- SMB Signing: {result.smb_signing}")
+    lines.append(f"- LDAP Channel Binding: {result.ldap_channel_binding}")
     lines.append(f"- Domain Trusts: {len(result.trusts)}")
     lines.append(f"- Findings: {len(result.findings)} ({severity_counts['HIGH']}H/{severity_counts['MEDIUM']}M/{severity_counts['LOW']}L)")
     lines.append("")
